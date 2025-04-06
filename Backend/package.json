@@ -1,0 +1,20 @@
+{
+  "name": "chat-backend",
+  "version": "1.0.0",
+  "description": "This is a Chat Web Application Backend Service",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon src/index.js"
+  },
+  "keywords": [
+    "Live Chat",
+    "SocketIO"
+  ],
+  "author": "Mandeep",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
