@@ -245,4 +245,177 @@ const changePassword = asyncHandler(async (req, res) => {
       new ApiResponse(200, updatedUser, "The Password is Updated SuccessFully")
     );
 });
-export { register, signIn, logout, editUser, changePassword };
+
+const viewProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id).select(
+    "-refreshToken -password"
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User Fetched SuccessFully"));
+});
+
+const bulkUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id).select("blockedUser");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const allUsers = await User.find({
+    _id: { $nin: user.blockedUser },
+  }).select("-password -refreshToken -email");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, allUsers, "All Users Fetched Successfully"));
+});
+
+//there will be a button of "+ or add " which trigger this
+const addFriend = asyncHandler(async (req, res) => {
+  //Friend comes from body (in future params)
+  const { friendId } = req.body;
+
+  //FriendId required
+  if (!friendId) {
+    throw new ApiError(400, "Friend ID is required");
+  }
+
+  //Extracting our user
+  const user = await User.findById(req.user?._id).select("friends");
+
+  //User exists
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  //if Friend already exists
+  if (user.friends.includes(friendId)) {
+    throw new ApiError(400, "User is already in your friends list");
+  }
+
+  //finding friend in db
+  const friend = await User.findById(friendId);
+  //friend not found
+  if (!friend) {
+    throw new ApiError(404, "Friend not found");
+  } else {
+    friend.friends.push(req.user?._id);
+    await friend.save();
+  }
+
+  //if found
+  //Pushing to myUser friend list
+  user.friends.push(friendId);
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { user: friend }, "Friend added successfully"));
+});
+
+//There will be a button like "- or block" to trigger this
+const addToBlockList = asyncHandler(async (req, res) => {
+  const { blockUserId } = req.body;
+
+  if (!blockUserId) {
+    throw new ApiError(400, "Block User Id is required");
+  }
+
+  const user = await User.findById(req.user?._id).select("blockedUser");
+
+  //User exists
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (user.blockedUser.includes(blockUserId)) {
+    throw new ApiError(400, "User is already in your Block list");
+  }
+
+  //finding blockUser in db
+  const blockUser = await User.findById(blockUserId);
+  //Block not found
+  if (!blockUser) {
+    throw new ApiError(404, "User not found");
+  }
+
+  user.blockedUser.push(blockUserId);
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "User Blocked successfully"));
+});
+
+const allFriends = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id).select("friends");
+
+  if (!user || !user.friends || user.friends.length === 0) {
+    throw new ApiError(404, "No friends found");
+  }
+
+  const allKnowns = await User.find({ _id: { $in: user.friends } }).select(
+    "-password -refreshToken -email"
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, allKnowns, "Friends fetched successfully"));
+});
+
+const viewOtherProfile = asyncHandler(async (req, res) => {
+  const { userId } = req.params; // Get userId from URL parameter
+
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+
+  // Find user by userId
+  const user = await User.findById(userId).select("-password -refreshToken");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User profile fetched successfully"));
+});
+
+const searchContacts = asyncHandler(async (req, res) => {
+  const { phoneNo } = req.body;
+
+  if (!phoneNo) {
+    throw new ApiError(400, "Phone number is required for searching");
+  }
+
+  // Search for users with the given phone number (or email)
+  const users = await User.find({
+    phoneNo: { $regex: phoneNo, $options: "i" }, // Case-insensitive search
+  }).select("-password -refreshToken");
+
+  if (users.length === 0) {
+    throw new ApiError(404, "No users found with the given phone number");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, users, "Users found successfully"));
+});
+
+export {
+  register,
+  signIn,
+  logout,
+  editUser,
+  changePassword,
+  viewProfile,
+  bulkUser,
+  addFriend,
+  addToBlockList,
+  allFriends,
+  viewOtherProfile,
+  searchContacts,
+};
