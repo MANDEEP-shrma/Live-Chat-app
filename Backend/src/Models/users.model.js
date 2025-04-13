@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 const { Schema } = mongoose;
 
 const userSchema = new Schema(
@@ -30,10 +31,11 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true,
-      match: [
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$/,
-        "Password must be 8-16 characters and contain only letters, numbers, @, -, or _",
-      ],
+      // match: [
+      //   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$/,
+      //   "Password must be 8-16 characters and contain only letters, numbers, @, -, or _",
+      // ],
+      match: [/^.{8,16}$/, "Password must be 8 to 16 characters"],
     },
     reportNo: {
       type: Number,
@@ -59,6 +61,9 @@ const userSchema = new Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    refreshToken: {
+      type: String,
     },
   },
   {
@@ -109,4 +114,4 @@ userSchema.methods.generateRefreshToken = async function () {
   );
 };
 
-export const User = model("User", userSchema);
+export const User = mongoose.model("User", userSchema);
