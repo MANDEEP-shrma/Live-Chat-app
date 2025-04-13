@@ -157,4 +157,56 @@ const logout = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User LoggedOut Successfully"));
 });
 
-export { register, signIn, logout };
+//on this route user can edit itself.
+//form-data in postman work after putting multer config in route
+const editUser = asyncHandler(async (req, res) => {
+  //User from auth middleware
+  const userId = req.user._id;
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized Access Denied");
+  }
+  //Fields he/she wants to edit
+  let { newName, newBio } = req.body;
+  if (!newName) {
+    newName = req.user.name;
+  }
+  if (!newBio) {
+    newBio = req.user.bio;
+  }
+
+  const avatarLocalPath = req.file?.path;
+  let avatar;
+  if (!avatarLocalPath) {
+    avatar = req.user.avatar;
+  } else {
+    avatar = await uploadOnCloudinary(avatarLocalPath);
+    if (!avatar) {
+      throw new ApiError(400, "Avatar Save failed,Please re-insert the image");
+    }
+  }
+
+  const userToUpdate = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        name: newName,
+        bio: newBio,
+        avatar: avatar.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+
+  if (!userToUpdate) {
+    throw new ApiError(
+      500,
+      "Server is not able to save your data, Try again later"
+    );
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, userToUpdate, "Data Updated successfully"));
+});
+
+export { register, signIn, logout, editUser };
