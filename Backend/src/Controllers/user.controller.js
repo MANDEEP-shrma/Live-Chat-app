@@ -209,4 +209,40 @@ const editUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, userToUpdate, "Data Updated successfully"));
 });
 
-export { register, signIn, logout, editUser };
+//on this route user can edit it's password
+const changePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword) {
+    throw new ApiError(
+      401,
+      "Please Enter your old password inorder to update with new one"
+    );
+  }
+
+  const user = await User.findById(req.user?._id);
+  //checking the oldpassword
+  const isOldPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  if (!isOldPasswordCorrect) {
+    throw new ApiError(401, "Your Old password doesn't match");
+  }
+
+  //if oldpassword is okay then we will save our new password
+  if (!newPassword) {
+    throw new ApiError(400, "Please enter a new password");
+  }
+
+  user.password = newPassword;
+  await user.save(); // <== this triggers the hashing
+
+  const updatedUser = user.toObject();
+  delete updatedUser.password;
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedUser, "The Password is Updated SuccessFully")
+    );
+});
+export { register, signIn, logout, editUser, changePassword };
