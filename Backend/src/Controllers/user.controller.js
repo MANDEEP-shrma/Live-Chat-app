@@ -1,4 +1,5 @@
 import { User } from "../Models/users.model.js";
+import { Message } from "../Models/messages.model.js";
 import { asyncHandler } from "../Utils/asyncHandler.js";
 import { ApiError } from "../Utils/apiError.js";
 import { ApiResponse } from "../Utils/apiResponse.js";
@@ -403,6 +404,62 @@ const searchContacts = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, users, "Users found successfully"));
+});
+
+//Send Message and GetALlmessage b/w two users
+const sendMessage = asyncHandler(async (req, res) => {});
+
+const getAllMessages = asyncHandler(async (req, res) => {
+  //I will extract current user from the auth middleware  and I will get the requested chat user from the click on that chat. which give me the id of that user.
+
+  const myCurrentUser = await User.findById(req.user._id);
+
+  const { requestedUserId } = req.params;
+  const requestedUser = await User.findById(requestedUserId);
+
+  if (!myCurrentUser) {
+    throw new ApiError(
+      404,
+      "Unauthorized Request! Please verify yourself first"
+    );
+  }
+
+  if (!requestedUser) {
+    throw new ApiError(404, "Please Enter a Requested User");
+  }
+
+  /*We have to extract all the chats b/w them like where our CurrentUser is sender or Requested user is sender because we need both of their messages to show it.*/
+
+  /*Also this .sort() because we want chat from oldest -> newest in mongodb 1 refers to old -> new and -1 refer to new->old that's why we used this*/
+
+  /*.populate(given_field) -> this method is use to replace the given_field id to it's whole document means our senderId will become whole sender data in the response
+   We get this type of response
+  {
+  sender: { _id: ..., name: "Mandeep", avatar: "..." },
+  receiver: { _id: ..., name: "Rahul", avatar: "..." },
+  content: "Hey bro"
+}*/
+
+  const chatOfBothUsers = await Message.find({
+    $or: [
+      { sender: myCurrentUser._id, receiver: requestedUser._id },
+      { sender: requestedUser._id, receiver: myCurrentUser._id },
+    ],
+  })
+    .sort({ createdAt: 1 })
+    .populate("sender")
+    .populate("receiver");
+
+  //So this chatofbothUser should be an array.like there are many chats between them so we will pass this array in frontend
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        chatOfBothUsers,
+        "All chats are fetched Successfully"
+      )
+    );
 });
 
 export {
