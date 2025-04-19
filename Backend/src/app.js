@@ -1,7 +1,12 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import http from "http";
 const app = express();
+const server = http.createServer(app);
+import { initialiseSocketIO } from "./Utils/socket.js";
+
+const io = initialiseSocketIO(server);
 
 app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
 app.use(express.json({ limit: "16kb" }));
@@ -13,4 +18,4 @@ import userRouter from "./Routes/user.route.js";
 
 app.use("/api/v1/users", userRouter);
 
-export { app };
+export { app, server };

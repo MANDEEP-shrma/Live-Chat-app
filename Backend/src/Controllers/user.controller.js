@@ -4,6 +4,7 @@ import { asyncHandler } from "../Utils/asyncHandler.js";
 import { ApiError } from "../Utils/apiError.js";
 import { ApiResponse } from "../Utils/apiResponse.js";
 import { uploadOnCloudinary } from "../Utils/cloudinary.js";
+import { emitMessageToUser } from "../Utils/socket.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -407,7 +408,57 @@ const searchContacts = asyncHandler(async (req, res) => {
 });
 
 //Send Message and GetALlmessage b/w two users
-const sendMessage = asyncHandler(async (req, res) => {});
+
+const sendMessage = asyncHandler(async (req, res) => {
+  //When user click the send button
+  const { receiverId } = req.params;
+  const { content } = req.body;
+  const senderId = req.user._id;
+
+  if (!content || !content.trim()) {
+    throw new ApiError(400, "Message Content Required");
+  }
+
+  const receiver = await User.findById(receiverId);
+  if (!receiver) {
+    throw new ApiError(404, "Receiver Not found");
+  }
+
+  //checking for blocklist :- If the sender is blocked
+  if (receiver.blockedUser && receiver.blockedUser.includes(senderId)) {
+    throw new ApiError(403, "Cannot Send message to this User");
+  }
+
+  //First create the message
+  const message = await Message.create({
+    sender: senderId,
+    receiver: receiverId,
+    content,
+  });
+
+  //Now we can send the message as response but we send populated response
+  const populatedMessage = await Message.findById(message._id)
+    .populate("sender", "name avatar")
+    .populate("receiver", "name avatar");
+
+  //if user online show him message instantly
+  //this "new-message" is event name that we give on our own now from frontend if any emit come with this event that would catch by this.
+  const isDelivered = emitMessageToUser(
+    receiverId.toString(),
+    "new-message",
+    populatedMessage
+  );
+
+  return res
+    .status(201)
+    .json(
+      new ApiResponse(
+        200,
+        { message: populatedMessage, isDelivered },
+        "Message Sent successfully"
+      )
+    );
+});
 
 const getAllMessages = asyncHandler(async (req, res) => {
   //I will extract current user from the auth middleware  and I will get the requested chat user from the click on that chat. which give me the id of that user.
@@ -475,4 +526,6 @@ export {
   allFriends,
   viewOtherProfile,
   searchContacts,
+  getAllMessages,
+  sendMessage,
 };

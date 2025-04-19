@@ -12,6 +12,8 @@ import {
   addToBlockList,
   viewOtherProfile,
   searchContacts,
+  getAllMessages,
+  sendMessage,
 } from "../Controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -35,4 +37,6 @@ router.get("/view-profile/:userId", verifyJWT, viewOtherProfile);
 
 // Route for searching new contacts
 router.post("/search-contacts", verifyJWT, searchContacts);
+router.post("/open-chat/:receiverId", verifyJWT, sendMessage);
+router.get("/get-all-messages/:requestedUserId", verifyJWT, getAllMessages);
 export default router;
