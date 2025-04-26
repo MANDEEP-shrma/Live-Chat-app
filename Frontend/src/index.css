@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 6% 10%;
+    --foreground: 0 0% 90%;
+
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 90%;
+
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 90%;
+
+    --primary: 0 0% 90%;
+    --primary-foreground: 240 6% 10%;
+
+    --secondary: 240 4% 63%;
+    --secondary-foreground: 0 0% 90%;
+
+    --muted: 240 4% 63%;
+    --muted-foreground: 240 5% 44%;
+
+    --accent: 240 40% 56%;
+    --accent-foreground: 0 0% 90%;
+
+    --destructive: 0 71% 61%;
+    --destructive-foreground: 0 0% 90%;
+
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 240 4% 16%;
+
+    --success: 142 44% 46%;
+    --success-foreground: 0 0% 90%;
+
+    --button: 14 84% 57%;
+    --button-foreground: 0 0% 90%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 6% 10%;
+    --foreground: 0 0% 90%;
+
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 90%;
+
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 90%;
+
+    --primary: 0 0% 90%;
+    --primary-foreground: 240 6% 10%;
+
+    --secondary: 240 4% 63%;
+    --secondary-foreground: 0 0% 90%;
+
+    --muted: 240 4% 63%;
+    --muted-foreground: 240 5% 44%;
+
+    --accent: 240 40% 56%;
+    --accent-foreground: 0 0% 90%;
+
+    --destructive: 0 71% 61%;
+    --destructive-foreground: 0 0% 90%;
+
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 240 4% 16%;
+
+    --success: 142 44% 46%;
+    --success-foreground: 0 0% 90%;
+
+    --button: 14 84% 57%;
+    --button-foreground: 0 0% 90%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
