@@ -31,6 +31,12 @@ const initialiseSocketIO = (server) => {
         .populate("sender", "name avatar")
         .populate("receiver", "name avatar");
 
+      // Update isDelivered field to true for all unread messages
+      await Message.updateMany(
+        { receiver: userId, isRead: false },
+        { isDelivered: true }
+      );
+
       unreadMessages.forEach((msg) => {
         io.to(socket.id).emit("unread-messages", msg);
       });

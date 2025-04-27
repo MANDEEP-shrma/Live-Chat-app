@@ -449,6 +449,15 @@ const sendMessage = asyncHandler(async (req, res) => {
     populatedMessage
   );
 
+  if (isDelivered) {
+    // Update the isDelivered field in the database
+    await Message.findByIdAndUpdate(
+      message._id,
+      { $set: { isDelivered: true } },
+      { new: true }
+    );
+  }
+
   return res
     .status(201)
     .json(
