@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,22 +17,44 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Camera, User, Lock, Bell, Save, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import axios from "axios";
+import { login, logout } from "@/store/authSlice";
 
-// Mock user data
-const user = {
-  id: "1",
-  name: "John Doe",
-  email: "john.doe@example.com",
-  avatar:
-    "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-  bio: "Software engineer with a passion for UI/UX design. Love traveling and photography in my free time.",
-  phone: "+1 (555) 123-4567",
-};
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  bio: string;
+  phone: string;
+}
 
 export default function ProfileEdit() {
+  const currUser =
+    useSelector((state: RootState) => state.auth.userData) ||
+    JSON.parse(localStorage.getItem("currentUser") || "{}");
+  const dispatch = useDispatch();
+  const user: User = {
+    id: currUser.id || "1",
+    name: currUser.name || "guest",
+    email: currUser.email || "guest23@example.com",
+    avatar: currUser.avatar || "",
+    bio: currUser.bio || "Hey,I am using chatApp",
+    phone: currUser.phoneNo || "XXXXXXXXXX",
+  };
+
+  if (!user.avatar) {
+    user.avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      user.name
+    )}&background=random`;
+  }
+
   const [formData, setFormData] = useState(user);
   const { toast } = useToast();
-
+  const navigate = useNavigate();
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   // This function is changing the data in real time.using state
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -43,18 +65,70 @@ export default function ProfileEdit() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would update the user's profile here
-    toast.success("Profile Updated", {
-      description: "Your profile has been updated successfully.",
-    });
+
+    const updateUser = new FormData();
+    updateUser.append("newName", formData.name);
+    updateUser.append("newBio", formData.bio);
+    if (avatarFile) {
+      updateUser.append("avatar", avatarFile);
+    } else {
+      updateUser.append("avatar", formData.avatar);
+    }
+
+    axios
+      .patch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/edit-profile`,
+        updateUser,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          withCredentials: true,
+        }
+      )
+      .then((response) => {
+        const updatedUser = response.data.data;
+        setFormData((prev) => ({
+          ...prev,
+          name: updatedUser.name,
+          bio: updatedUser.bio,
+          avatar: updatedUser.avatar,
+        }));
+        dispatch(login({ userData: updatedUser }));
+        localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+        toast.success("Profile Updated", {
+          description: "Your profile has been updated successfully.",
+        });
+      });
   };
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setnewPassword] = useState("");
 
   const handleSecuritySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    //Backend call.
-    toast.success("Password Updated", {
-      description: "Your Password has been updated successfully",
-    });
+    axios
+      .patch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/change-password`,
+        { oldPassword: currentPassword, newPassword },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      )
+      .then(() => {
+        toast.success("Password Updated", {
+          description: "Your Password has been updated successfully",
+        });
+      })
+      .catch((err) => {
+        console.error("Error updating password:", err);
+        toast.error("Failed to update password", {
+          description: err.response?.data?.message,
+        });
+      });
   };
 
   const handleAccountDelete = () => {
@@ -63,11 +137,40 @@ export default function ProfileEdit() {
       action: {
         label: "Confirm",
         onClick: () => {
-          console.log("User confirmed deletion");
-          // 🚀 Do your DB delete API call here
-          // Example: await deleteAccountAPI(userId);
+          axios
+            .get(
+              `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/deleteProfile`,
+              {
+                withCredentials: true,
+              }
+            )
+            .then(() => {
+              dispatch(logout());
+              navigate("/");
+              toast.success("Your account has deleted successfully", {
+                description: "We Miss your presence",
+              });
+            })
+            .catch((err) => {
+              console.log("profile deletion error ", err);
+              toast.error("Something went wrong", {
+                description: "Try again later",
+              });
+            });
         },
       },
+    });
+  };
+
+  const onClickPhoneNo = () => {
+    toast.warning("You can't change your phoneNo", {
+      description: "Phone no holds the ownership of this account",
+    });
+  };
+
+  const onClickEmail = () => {
+    toast.warning("You can't change your Email", {
+      description: "Email holds the ownership of this account",
     });
   };
 
@@ -140,23 +243,31 @@ export default function ProfileEdit() {
                           className="absolute -right-2 -bottom-2 h-8 w-8 rounded-full bg-background"
                           type="button"
                           onClick={() => {
-                            alert("hi");
+                            document.getElementById("avatar-upload")?.click();
                           }}
                         >
                           <Camera className="h-4 w-4" />
                           <span className="sr-only">Upload avatar</span>
                         </Button>
+                        <input
+                          id="avatar-upload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            setAvatarFile(e.target.files?.[0] || null);
+                            toast.warning("Image Inserted", {
+                              description: "Please save the changes",
+                            });
+                          }}
+                        />
                       </div>
-                      <div className="flex-1 space-y-1 text-center sm:text-left">
+                      <div className="flex-1 space-y-1 text-center mt-2 sm:text-left">
                         <h3 className="font-medium">{formData.name}</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-md text-muted-foreground">
                           {formData.email}
                         </p>
-                        <div className="mt-2 flex justify-center sm:justify-start gap-2 pt-2">
-                          <Button variant="ghost" size="sm" type="button">
-                            Remove
-                          </Button>
-                        </div>
+                        <div className="mt-2 flex justify-center sm:justify-start gap-2 pt-2"></div>
                       </div>
                     </div>
 
@@ -180,7 +291,9 @@ export default function ProfileEdit() {
                           name="email"
                           type="email"
                           value={formData.email}
-                          onChange={handleChange}
+                          readOnly
+                          onClick={onClickEmail}
+                          className="cursor-pointer bg-gray-600"
                         />
                       </div>
 
@@ -191,7 +304,9 @@ export default function ProfileEdit() {
                           name="phone"
                           type="tel"
                           value={formData.phone}
-                          onChange={handleChange}
+                          readOnly
+                          onClick={onClickPhoneNo}
+                          className="cursor-pointer bg-gray-600"
                         />
                       </div>
 
@@ -266,12 +381,20 @@ export default function ProfileEdit() {
                         <Label htmlFor="current-password">
                           Current Password
                         </Label>
-                        <Input id="current-password" type="password" />
+                        <Input
+                          id="current-password"
+                          type="password"
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                        />
                       </div>
 
                       <div className="grid gap-3">
                         <Label htmlFor="new-password">New Password</Label>
-                        <Input id="new-password" type="password" />
+                        <Input
+                          id="new-password"
+                          type="password"
+                          onChange={(e) => setnewPassword(e.target.value)}
+                        />
                       </div>
                     </div>
 

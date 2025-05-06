@@ -83,16 +83,14 @@ const register = asyncHandler(async (req, res) => {
 });
 
 const signIn = asyncHandler(async (req, res) => {
-  const { email, phoneNo, password } = req.body;
-
-  if (!(phoneNo || email)) {
-    throw new ApiError(400, "PhoneNo or Email is required");
+  const { emailorPhone, password } = req.body;
+  console.log(req.body);
+  let user;
+  if (emailorPhone.includes("@")) {
+    user = await User.findOne({ email: emailorPhone });
+  } else {
+    user = await User.findOne({ phoneNo: emailorPhone });
   }
-
-  const user = await User.findOne({
-    $or: [{ phoneNo }, { email }],
-  });
-
   if (!user) {
     throw new ApiError(404, "Signup first");
   }
@@ -131,6 +129,13 @@ const signIn = asyncHandler(async (req, res) => {
         "User loggedIn Successfully"
       )
     );
+});
+
+const me = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).select(
+    "-refreshToken -password"
+  );
+  return res.status(200).json({ user: user });
 });
 
 const logout = asyncHandler(async (req, res) => {
@@ -211,6 +216,24 @@ const editUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, userToUpdate, "Data Updated successfully"));
 });
 
+const deleteMe = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized Access Denied");
+  }
+
+  const user = await User.findByIdAndDelete(userId);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "User deleted successfully"));
+});
+
 //on this route user can edit it's password
 const changePassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
@@ -258,6 +281,7 @@ const viewProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "User Fetched SuccessFully"));
 });
 
+//returns all users but not return the users which are blocked by current user.
 const bulkUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user?._id).select("blockedUser");
 
@@ -278,7 +302,7 @@ const bulkUser = asyncHandler(async (req, res) => {
 const addFriend = asyncHandler(async (req, res) => {
   //Friend comes from body (in future params)
   const { friendId } = req.body;
-
+  console.log(friendId);
   //FriendId required
   if (!friendId) {
     throw new ApiError(400, "Friend ID is required");
@@ -302,15 +326,19 @@ const addFriend = asyncHandler(async (req, res) => {
   //friend not found
   if (!friend) {
     throw new ApiError(404, "Friend not found");
-  } else {
-    friend.friends.push(req.user?._id);
-    await friend.save();
   }
 
-  //if found
-  //Pushing to myUser friend list
-  user.friends.push(friendId);
-  await user.save();
+  // Add current user to friend's friends list
+  await User.updateOne(
+    { _id: friendId },
+    { $addToSet: { friends: req.user?._id } }
+  );
+
+  // Add friend to current user's friends list
+  await User.updateOne(
+    { _id: req.user?._id },
+    { $addToSet: { friends: friendId } }
+  );
 
   return res
     .status(200)
@@ -319,13 +347,13 @@ const addFriend = asyncHandler(async (req, res) => {
 
 //There will be a button like "- or block" to trigger this
 const addToBlockList = asyncHandler(async (req, res) => {
-  const { blockUserId } = req.body;
+  const blockUserId = req.query.blockUserId;
 
   if (!blockUserId) {
     throw new ApiError(400, "Block User Id is required");
   }
 
-  const user = await User.findById(req.user?._id).select("blockedUser");
+  const user = await User.findById(req.user?._id).select("blockedUser friends");
 
   //User exists
   if (!user) {
@@ -343,12 +371,70 @@ const addToBlockList = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
+  // Add to blocked list
   user.blockedUser.push(blockUserId);
+
+  // Remove from friends list if present
+  user.friends = user.friends.filter(
+    (friendId) => friendId.toString() !== blockUserId
+  );
+
   await user.save();
+
+  // Delete messages between the current user and the blocked user
+  await Message.deleteMany({
+    $or: [
+      { sender: req.user._id, receiver: blockUserId },
+      { sender: blockUserId, receiver: req.user._id },
+    ],
+  });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "User Blocked successfully"));
+    .json(
+      new ApiResponse(200, {}, "User Blocked successfully and messages deleted")
+    );
+});
+const removeFriend = asyncHandler(async (req, res) => {
+  const { friendId } = req.body;
+
+  if (!friendId) {
+    throw new ApiError(400, "Friend ID is required");
+  }
+
+  const user = await User.findById(req.user?._id).select("friends");
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (!user.friends.includes(friendId)) {
+    throw new ApiError(400, "User is not in your friends list");
+  }
+
+  // Remove friend from current user's friends list
+  user.friends = user.friends.filter((id) => id.toString() !== friendId);
+  await user.save();
+
+  // Remove current user from friend's friends list
+  await User.updateOne(
+    { _id: friendId },
+    { $pull: { friends: req.user?._id } }
+  );
+
+  // Delete messages between the current user and the removed friend
+  await Message.deleteMany({
+    $or: [
+      { sender: req.user._id, receiver: friendId },
+      { sender: friendId, receiver: req.user._id },
+    ],
+  });
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, {}, "Friend removed successfully and chats deleted")
+    );
 });
 
 const allFriends = asyncHandler(async (req, res) => {
@@ -365,6 +451,53 @@ const allFriends = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, allKnowns, "Friends fetched successfully"));
+});
+
+const unBlockUser = asyncHandler(async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+
+  const currentUser = await User.findById(req.user._id).select("blockedUser");
+
+  if (!currentUser) {
+    throw new ApiError(404, "Current user not found");
+  }
+
+  if (!currentUser.blockedUser.includes(userId)) {
+    throw new ApiError(400, "User is not in your blocked list");
+  }
+
+  // Remove the user from the blocked list
+  currentUser.blockedUser = currentUser.blockedUser.filter(
+    (blockedId) => blockedId.toString() !== userId
+  );
+
+  await currentUser.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "User unblocked successfully"));
+});
+
+const allBlockedUsers = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user?._id).select("blockedUser");
+
+  if (!user || !user.blockedUser || user.blockedUser.length === 0) {
+    throw new ApiError(404, "No blocked users found");
+  }
+
+  const blockedUsers = await User.find({
+    _id: { $in: user.blockedUser },
+  }).select("-password -refreshToken -email");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, blockedUsers, "Blocked users fetched successfully")
+    );
 });
 
 const viewOtherProfile = asyncHandler(async (req, res) => {
@@ -387,32 +520,51 @@ const viewOtherProfile = asyncHandler(async (req, res) => {
 });
 
 const searchContacts = asyncHandler(async (req, res) => {
-  const { phoneNo } = req.body;
-
-  if (!phoneNo) {
-    throw new ApiError(400, "Phone number is required for searching");
+  const emailorPhone = req.query.emailorPhone;
+  if (!emailorPhone) {
+    throw new ApiError(400, "Please provide a valid email or phone number");
   }
 
-  // Search for users with the given phone number (or email)
-  const users = await User.find({
-    phoneNo: { $regex: phoneNo, $options: "i" }, // Case-insensitive search
-  }).select("-password -refreshToken");
+  let user;
+  if (emailorPhone.includes("@")) {
+    user = await User.findOne({ email: emailorPhone }).select(
+      "-password -refreshToken"
+    );
+  } else {
+    user = await User.findOne({ phoneNo: emailorPhone }).select(
+      "-password -refreshToken"
+    );
+  }
 
-  if (users.length === 0) {
-    throw new ApiError(404, "No users found with the given phone number");
+  if (!user) {
+    throw new ApiError(
+      404,
+      "No user found with the provided email or phone number"
+    );
+  }
+
+  const currentUser = await User.findById(req.user._id).select(
+    "friends blockedUser"
+  );
+
+  if (currentUser.blockedUser.includes(user._id.toString())) {
+    throw new ApiError(403, "This user is in your block list");
+  }
+
+  if (currentUser.friends.includes(user._id.toString())) {
+    throw new ApiError(400, "User is already in your friends list");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, users, "Users found successfully"));
+    .json(new ApiResponse(200, user, "User found successfully"));
 });
 
 //Send Message and GetALlmessage b/w two users
 
 const sendMessage = asyncHandler(async (req, res) => {
   //When user click the send button
-  const { receiverId } = req.params;
-  const { content } = req.body;
+  const { receiverId, content } = req.body;
   const senderId = req.user._id;
 
   if (!content || !content.trim()) {
@@ -433,7 +585,7 @@ const sendMessage = asyncHandler(async (req, res) => {
   const message = await Message.create({
     sender: senderId,
     receiver: receiverId,
-    content,
+    message: content,
   });
 
   //Now we can send the message as response but we send populated response
@@ -468,13 +620,11 @@ const sendMessage = asyncHandler(async (req, res) => {
       )
     );
 });
-
 const getAllMessages = asyncHandler(async (req, res) => {
-  //I will extract current user from the auth middleware  and I will get the requested chat user from the click on that chat. which give me the id of that user.
-
+  // Extract current user from the auth middleware and get the requested chat user from the URL parameter.
   const myCurrentUser = await User.findById(req.user._id);
-
-  const { requestedUserId } = req.params;
+  const requestedUserId = req.query.friendId; // Extract requested user ID from params
+  console.log(requestedUserId);
   const requestedUser = await User.findById(requestedUserId);
 
   if (!myCurrentUser) {
@@ -502,8 +652,14 @@ const getAllMessages = asyncHandler(async (req, res) => {
 
   const chatOfBothUsers = await Message.find({
     $or: [
-      { sender: myCurrentUser._id, receiver: requestedUser._id },
-      { sender: requestedUser._id, receiver: myCurrentUser._id },
+      {
+        sender: myCurrentUser._id.toString(),
+        receiver: requestedUser._id.toString(),
+      },
+      {
+        sender: requestedUser._id.toString(),
+        receiver: myCurrentUser._id.toString(),
+      },
     ],
   })
     .sort({ createdAt: 1 })
@@ -527,14 +683,19 @@ export {
   signIn,
   logout,
   editUser,
+  deleteMe,
   changePassword,
   viewProfile,
+  allBlockedUsers,
   bulkUser,
   addFriend,
   addToBlockList,
+  removeFriend,
   allFriends,
+  unBlockUser,
   viewOtherProfile,
   searchContacts,
   getAllMessages,
   sendMessage,
+  me,
 };

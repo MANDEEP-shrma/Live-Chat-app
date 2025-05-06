@@ -1,10 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 interface Friend {
-  id: string;
+  _id: string;
   name: string;
   avatar: string;
-  isOnline: boolean;
+  status: "online" | "offline";
 }
 
 interface FriendState {
@@ -25,10 +25,10 @@ const friendSlice = createSlice({
     },
     updateOnlineStatus: (state, action) => {
       const friend = state.listOfFriends.find(
-        (f) => f.id === action.payload.friend.id
+        (f) => f._id === action.payload.friend.id
       );
       if (friend) {
-        friend.isOnline = action.payload.friend.isOnline;
+        friend.status = action.payload.friend.status;
       }
     },
     addFriend: (state, action) => {
@@ -38,7 +38,7 @@ const friendSlice = createSlice({
     removeFriend: (state, action) => {
       //I will give the friendId and filter the array where he will not be the part of new one.
       state.listOfFriends = state.listOfFriends.filter(
-        (f) => f.id !== action.payload.friendId
+        (f) => f._id !== action.payload.friendId
       );
     },
   },

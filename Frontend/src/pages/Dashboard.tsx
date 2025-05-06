@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { initSocket } from "@/hooks/socket"; // adjust path as needed
 import { SearchBar } from "@/components/dashboard/SearchBar";
 import { UserMenu } from "@/components/dashboard/UserMenu";
 import { FriendCard } from "@/components/dashboard/FriendCard";
@@ -6,66 +7,98 @@ import { ChatWindow } from "@/components/dashboard/ChatWindow";
 import { MessageCircle } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Link } from "react-router-dom";
-
-// Mock data
-const currentUser = {
-  name: "John Doe",
-  email: "john.doe@example.com",
-  avatar:
-    "https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-};
-
-const friends = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    avatar:
-      "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    status: "online" as const,
-    bio: "UX Designer | Travel enthusiast | Coffee lover",
-    lastMessage: "Hey, are we still meeting tomorrow?",
-  },
-  {
-    id: "2",
-    name: "Michael Chen",
-    avatar:
-      "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    status: "offline" as const,
-    bio: "Software Engineer | Gamer | Foodie",
-    lastMessage: "Thanks for the help with that project!",
-  },
-  {
-    id: "3",
-    name: "Emma Rodriguez",
-    avatar:
-      "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    status: "away" as const,
-    bio: "Marketing Professional | Music lover | Hiking enthusiast",
-    lastMessage: "Did you see the latest campaign results?",
-  },
-  {
-    id: "4",
-    name: "David Kim",
-    avatar:
-      "https://images.pexels.com/photos/91227/pexels-photo-91227.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    status: "online" as const,
-    bio: "Product Manager | Basketball fan | Chef in training",
-    lastMessage: "Let's catch up soon!",
-  },
-  {
-    id: "5",
-    name: "Jessica Taylor",
-    avatar:
-      "https://images.pexels.com/photos/1036623/pexels-photo-1036623.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2",
-    status: "online" as const,
-    bio: "Graphic Designer | Cat lover | Photography enthusiast",
-    lastMessage: "I just sent you the latest designs",
-  },
-];
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import axios from "axios";
+import { setFriends, updateOnlineStatus } from "@/store/friendSlice";
+import { markMessageRead, sendMessage } from "@/store/messageSlice";
 
 export default function Dashboard() {
+  const currentUser =
+    useSelector((state: RootState) => state.auth.userData) ||
+    JSON.parse(localStorage.getItem("currentUser") || "{}");
+
+  const friends = useSelector((state: RootState) => state.friend.listOfFriends);
   const [activeFriend, setActiveFriend] = useState<string | null>(null);
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const dispatch = useDispatch();
+  const socketRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (currentUser && currentUser.name !== "Guest") {
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+      localStorage.setItem("userId", currentUser._id);
+      localStorage.setItem("authStatus", "true");
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!socketRef.current) {
+      const socket = initSocket();
+      socketRef.current = socket;
+
+      socket.on("connect", () => {
+        const userId = localStorage.getItem("userId");
+
+        if (userId) {
+          socket.emit("user_connected", userId);
+          console.log("Emitted user_connected:", userId);
+        } else {
+          console.warn("No userId found for user_connected emit.");
+        }
+      });
+
+      socket.on("user_online", (userId) => {
+        dispatch(
+          updateOnlineStatus({ friend: { id: userId, status: "online" } })
+        );
+      });
+
+      socket.on("user_offline", (userId) => {
+        dispatch(
+          updateOnlineStatus({ friend: { id: userId, status: "offline" } })
+        );
+      });
+
+      socket.on("new-message", (data) => {
+        console.log("New message received from server:", data);
+
+        dispatch(
+          sendMessage({
+            friendId: data.sender._id, // data.sender is populated already
+            message: data,
+          })
+        );
+      });
+
+      socket.on("unread-messages", (message) => {
+        console.log("Unread message received on login:", message);
+        dispatch(
+          sendMessage({
+            friendId: message.sender._id,
+            message: message,
+          })
+        );
+      });
+
+      socket.on("message_read_ack", ({ messageId, friendId }) => {
+        dispatch(markMessageRead({ messageId, friendId }));
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/users/get-all-friends`, {
+        withCredentials: true,
+      })
+      .then((response) => {
+        dispatch(setFriends({ listOfFriends: response.data.data }));
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }, []);
 
   const handleFriendClick = (friendId: string) => {
     setActiveFriend(friendId);
@@ -76,7 +109,7 @@ export default function Dashboard() {
   };
 
   // I have activeFriend now I am searching for that friend from the array.
-  const selectedFriend = friends.find((f) => f.id === activeFriend);
+  const selectedFriend = friends?.find((f) => f._id === activeFriend) || null;
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -106,9 +139,9 @@ export default function Dashboard() {
               <h2 className="font-semibold text-primary">Messages</h2>
             </div>
             <div className="p-2 space-y-2">
-              {friends.map((friend) => (
+              {friends?.map((friend) => (
                 <FriendCard
-                  key={friend.id}
+                  key={friend._id}
                   friend={friend}
                   onClick={handleFriendClick}
                 />
@@ -122,6 +155,7 @@ export default function Dashboard() {
           <div className="flex-1 flex min-w-0 flex-col">
             <ChatWindow
               friend={selectedFriend}
+              currUser={currentUser._id}
               onClose={handleChatClose}
               isMobile={isMobile}
             />

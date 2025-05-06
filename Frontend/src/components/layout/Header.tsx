@@ -1,8 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../theme/ThemeProvider";
+import axios from "axios";
+import { useDispatch } from "react-redux";
+import { logout } from "@/store/authSlice";
+import { toast } from "sonner";
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -11,7 +15,27 @@ interface HeaderProps {
 export function Header({ isAuthenticated = false }: HeaderProps) {
   //add a useEffect which pull from the auth state don't use props
   const { theme, setTheme } = useTheme();
-
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const handleLogout = () => {
+    axios
+      .get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/users/logout`, {
+        withCredentials: true,
+      })
+      .then(() => {
+        dispatch(logout());
+        navigate("/");
+        toast.success("Miss You!!,", {
+          description: "Hope to see you again.",
+        });
+      })
+      .catch((err) => {
+        console.log(err);
+        toast.error("Oh oo..", {
+          description: err,
+        });
+      });
+  };
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -45,11 +69,11 @@ export function Header({ isAuthenticated = false }: HeaderProps) {
             </>
           ) : (
             <>
-              <Link to="/logout">
+              <Link to="/dashboard">
                 <Button variant="outline">Dashboard</Button>
               </Link>
               <Link to="/logout">
-                <Button>Logout</Button>
+                <Button onClick={handleLogout}>Logout</Button>
               </Link>
             </>
           )}

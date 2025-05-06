@@ -11,17 +11,49 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/store/store";
+import axios from "axios";
+import { login, logout } from "@/store/authSlice";
 
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState(false);
+  const dispatch = useDispatch();
+  const isUserAuthenticated = useSelector(
+    (state: RootState) => state.auth.status
+  );
 
   useEffect(() => {
-    setIsVisible(true);
+    axios
+      .get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/users/me`, {
+        withCredentials: true,
+      })
+      .then((response) => {
+        dispatch(login(response.data.user));
+      })
+      .catch((err) => {
+        console.log("Error : ", err);
+        dispatch(logout());
+      })
+      .finally(() => {
+        setIsVisible(true);
+      });
   }, []);
+
+  if (!isVisible) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary border-solid"></div>
+          <p className="mt-4 text-lg font-medium text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
+      <Header isAuthenticated={isUserAuthenticated} />
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative overflow-hidden bg-gradient-to-br from-background to-secondary/10 pt-16 pb-20 md:pt-24 md:pb-32">

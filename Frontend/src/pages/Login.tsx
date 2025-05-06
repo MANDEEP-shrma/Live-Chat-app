@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,21 +14,83 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { MessageCircle } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { login, logout } from "@/store/authSlice";
+import axios from "axios";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [emailorPhone, setEmailorPhone] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const { toast } = useToast();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    //if check to secure email/phoneNo input.
+    if (emailorPhone.includes("@")) {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailorPhone)) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+    } else if (/^\d+$/.test(emailorPhone)) {
+      // Validate phone number format
+      const phoneRegex = /^\d{10}$/;
+      if (!phoneRegex.test(emailorPhone)) {
+        toast.error("Please enter a valid 10-digit phone number.");
+        return;
+      }
+    } else {
+      // Handle invalid input format
+      toast.error("Please enter a valid email address or phone number.");
+      return;
+    }
+
     if (rememberMe) {
       toast.warning("You are My GF??", {
         description: "Then why the hell I remember you!!",
       });
     }
-    console.log("Login submitted:", { email, password, rememberMe });
+
+    const currUser = {
+      emailorPhone,
+      password,
+    };
+    //db call
+    axios
+      .post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/signin`,
+        currUser,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      )
+      .then((response) => {
+        //updating authSlice
+        const userData = response.data.data.user;
+        dispatch(login({ userData }));
+        navigate("/");
+        //will give success toast
+        toast.success("Woahhh!!", {
+          description: "Welcome, to the Website",
+        });
+      })
+      .catch((err) => {
+        dispatch(logout());
+        console.log("Login failed", err);
+        const errorMessage =
+          err.response?.data?.message || "Something went wrong";
+        //failure toast
+        toast.error("Sorry!", {
+          description: errorMessage,
+        });
+      });
   };
 
   const handleForgetPassword = (e: React.FormEvent) => {
@@ -58,13 +120,13 @@ export default function Login() {
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email or PhoneNo</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  placeholder="name@example.com | xxxxxxxxxx"
+                  value={emailorPhone}
+                  onChange={(e) => setEmailorPhone(e.target.value)}
                   required
                   className="w-full"
                 />
@@ -84,6 +146,7 @@ export default function Login() {
                   id="password"
                   type="password"
                   value={password}
+                  placeholder="Enter your password"
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full"

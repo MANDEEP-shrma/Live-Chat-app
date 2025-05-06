@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom"; // Assuming you're using react-router
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom"; // Assuming you're using react-router
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -9,16 +9,12 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"; // Make sure these are properly imported
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-  User,
-  UserX,
-  Settings,
-  FileText,
-  HelpCircle,
-  LogOut,
-} from "lucide-react";
+import { User, UserX, FileText, HelpCircle, LogOut } from "lucide-react";
+import axios from "axios";
+import { useDispatch } from "react-redux";
+import { logout } from "@/store/authSlice";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserMenuProps {
   user: {
@@ -30,6 +26,28 @@ interface UserMenuProps {
 
 export function UserMenu({ user }: UserMenuProps) {
   const [open, setOpen] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const handleLogout = () => {
+    axios
+      .get(`${import.meta.env.VITE_BACKEND_URL}/api/v1/users/logout`, {
+        withCredentials: true,
+      })
+      .then(() => {
+        dispatch(logout());
+        navigate("/");
+        toast.success("Miss You!!,", {
+          description: "Hope to see you again.",
+        });
+      })
+      .catch((err) => {
+        console.log(err);
+        toast.error("Oh oo..", {
+          description: err,
+        });
+      });
+  };
 
   return (
     <div className="relative">
@@ -99,13 +117,13 @@ export function UserMenu({ user }: UserMenuProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem>
-            <Link
-              to="/logout"
+            <button
+              onClick={handleLogout}
               className="flex w-full cursor-pointer items-center text-destructive focus:text-destructive"
             >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
-            </Link>
+            </button>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

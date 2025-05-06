@@ -31,10 +31,6 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true,
-      // match: [
-      //   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,16}$/,
-      //   "Password must be 8-16 characters and contain only letters, numbers, @, -, or _",
-      // ],
       match: [/^.{8,16}$/, "Password must be 8 to 16 characters"],
     },
     reportNo: {
@@ -57,10 +53,10 @@ const userSchema = new Schema(
     avatar: {
       type: String,
     },
-
-    isActive: {
-      type: Boolean,
-      default: true,
+    status: {
+      type: String,
+      enum: ["online", "offline"],
+      default: "offline",
     },
     refreshToken: {
       type: String,

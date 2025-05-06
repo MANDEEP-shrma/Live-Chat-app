@@ -58,7 +58,7 @@ const messageSlice = createSlice({
       const friendMessages = state.messages[action.payload.friendId];
       if (friendMessages) {
         const msg = friendMessages.find(
-          (m) => (m.id = action.payload.messageId)
+          (m) => m.id === action.payload.messageId
         );
 
         if (msg) {

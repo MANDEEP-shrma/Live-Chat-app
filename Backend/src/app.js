@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import http from "http";
+import { globalErrorHandler } from "./Utils/globalErrorHandler.js";
 const app = express();
 const server = http.createServer(app);
 import { initialiseSocketIO } from "./Utils/socket.js";
@@ -17,5 +18,6 @@ app.use(cookieParser());
 import userRouter from "./Routes/user.route.js";
 
 app.use("/api/v1/users", userRouter);
+app.use(globalErrorHandler);
 
 export { app, server };

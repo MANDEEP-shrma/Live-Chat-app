@@ -1,21 +1,14 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogClose,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 
 interface Friend {
-  id: string;
+  _id: string;
   name: string;
   avatar?: string;
-  status?: "online" | "offline" | "away";
+  status: "online" | "offline"; // Changed to boolean
   bio?: string;
   lastMessage?: string;
 }
@@ -27,20 +20,14 @@ interface FriendCardProps {
 
 export function FriendCard({ friend, onClick }: FriendCardProps) {
   const [showProfile, setShowProfile] = useState(false);
-
+  const [showImageDialog, setShowImageDialog] = useState(false);
   const handleCardClick = () => {
-    onClick(friend.id);
+    onClick(friend._id);
   };
 
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowProfile(true);
-  };
-
-  const statusColors = {
-    online: "bg-green-500",
-    offline: "bg-gray-400",
-    away: "bg-yellow-500",
   };
 
   return (
@@ -61,19 +48,15 @@ export function FriendCard({ friend, onClick }: FriendCardProps) {
                   .toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            {friend.status && (
-              <span
-                className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-white ${
-                  statusColors[friend.status]
-                }`}
-              />
+            {friend.status === "online" && (
+              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-white bg-green-500" />
             )}
           </div>
           <div className="flex-1 overflow-hidden">
             <h4 className="font-medium text-sm">{friend.name}</h4>
-            {friend.lastMessage && (
+            {friend.bio && (
               <p className="text-muted-foreground text-xs truncate mt-1">
-                {friend.lastMessage}
+                {friend.bio}
               </p>
             )}
           </div>
@@ -82,20 +65,12 @@ export function FriendCard({ friend, onClick }: FriendCardProps) {
 
       <Dialog open={showProfile} onOpenChange={setShowProfile}>
         <DialogContent className="sm:max-w-md">
-          <DialogTitle className="flex justify-between items-center">
-            <span>Profile</span>
-            <DialogClose asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogClose>
-          </DialogTitle>
+          <DialogTitle>Profile</DialogTitle>
           <div className="flex flex-col items-center pt-4 pb-6">
-            <Avatar className="h-24 w-24 mb-4">
+            <Avatar
+              className="h-24 w-24 mb-4 cursor-pointer"
+              onClick={() => setShowImageDialog(true)}
+            >
               <AvatarImage src={friend.avatar} alt={friend.name} />
               <AvatarFallback className="text-2xl">
                 {friend.name
@@ -105,21 +80,29 @@ export function FriendCard({ friend, onClick }: FriendCardProps) {
                   .toUpperCase()}
               </AvatarFallback>
             </Avatar>
+
+            {showImageDialog && (
+              <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+                <DialogContent className="p-0 bg-transparent shadow-none">
+                  <img
+                    src={friend.avatar}
+                    alt={friend.name}
+                    className="w-full h-full object-cover"
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
             <h3 className="text-xl font-semibold">{friend.name}</h3>
-            {friend.status && (
+            {friend.status === "online" && (
               <div className="flex items-center mt-1">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    statusColors[friend.status]
-                  } mr-2`}
-                />
+                <span className="h-2 w-2 rounded-full bg-green-500 mr-2" />
                 <span className="text-sm text-muted-foreground capitalize">
-                  {friend.status}
+                  Online
                 </span>
               </div>
             )}
             {friend.bio && (
-              <p className="text-muted-foreground text-sm text-center mt-4 max-w-sm">
+              <p className="text-muted-foreground  text-md text-center mt-4 max-w-sm">
                 {friend.bio}
               </p>
             )}
@@ -127,12 +110,11 @@ export function FriendCard({ friend, onClick }: FriendCardProps) {
               <Button
                 onClick={() => {
                   setShowProfile(false);
-                  onClick(friend.id);
+                  onClick(friend._id);
                 }}
               >
                 Message
               </Button>
-              <Button variant="outline">View Details</Button>
             </div>
           </div>
         </DialogContent>
