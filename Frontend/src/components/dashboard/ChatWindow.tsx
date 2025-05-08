@@ -281,6 +281,23 @@ export function ChatWindow({
       // Add server ID to processed IDs to avoid duplicates from socket
       if (serverMessage && serverMessage._id) {
         processedMessageIds.current.add(serverMessage._id);
+        // Replace the temporary message with the server response
+        if (serverMessage && serverMessage._id) {
+          dispatch(
+            sendMessage({
+              friendId: friend._id,
+              message: {
+                ...tempMessage,
+                id: serverMessage._id,
+                isRead: Boolean(serverMessage.isRead),
+                isDelivered: Boolean(serverMessage.isDelivered),
+              },
+            })
+          );
+
+          // Add server ID to processed IDs to avoid duplicates from socket
+          processedMessageIds.current.add(serverMessage._id);
+        }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
