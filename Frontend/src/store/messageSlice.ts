@@ -66,6 +66,21 @@ const messageSlice = createSlice({
         }
       }
     },
+    replaceTempMessage: (state, action) => {
+      const { friendId, tempId, actualMessage } = action.payload;
+      const messages = state.messages[friendId] || [];
+
+      const index = messages.findIndex((msg) => msg.id === tempId);
+      if (index !== -1) {
+        //if the temp msg exists
+        messages[index] = actualMessage;
+      } else {
+        //but if it not exists
+        messages.push(actualMessage);
+      }
+
+      state.messages[friendId] = messages;
+    },
   },
 });
 
@@ -76,6 +91,7 @@ export const {
   fetchMessageFailure,
   sendMessage,
   markMessageRead,
+  replaceTempMessage,
 } = messageSlice.actions;
 
 export default messageSlice.reducer;
