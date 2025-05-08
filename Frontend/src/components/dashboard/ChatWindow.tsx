@@ -65,6 +65,14 @@ export function ChatWindow({
   currUser,
   isMobile = false,
 }: ChatWindowProps) {
+  const isProd = import.meta.env.MODE === "production";
+  const isDebug = import.meta.env.VITE_DEBUG_LOGGING === "true";
+
+  const log = (...args: any[]) => {
+    if (isProd && isDebug) {
+      console.log("🔥 [PROD DEBUG]", ...args);
+    }
+  };
   const [message, setMessage] = useState("");
   const dispatch = useDispatch();
   const { toast } = useToast();
@@ -162,7 +170,8 @@ export function ChatWindow({
     // Function to handle new messages from socket
     const handleNewMessage = (newMessage: any) => {
       console.log("New live message received:", newMessage);
-
+      log("📥 Socket received message:", newMessage);
+      log("🔌 Socket connected:", socket.id);
       // Create a consistent message ID
       const messageId = newMessage._id || newMessage.id;
 
@@ -173,14 +182,14 @@ export function ChatWindow({
         newMessage.receiver._id === friend._id ||
         newMessage.receiver === friend._id;
 
-      //Skiping the message if we have already processed this message
-      if (!isRelevantMessage || processedMessageIds.current.has(messageId)) {
+      if (!isRelevantMessage) {
         return;
       }
 
-      //if not then mark it as processed now.
-      // Mark as processed
-      processedMessageIds.current.add(messageId);
+      //Skiping the message if we have already processed this message
+      if (processedMessageIds.current.has(messageId)) {
+        return;
+      }
 
       const formattedMessage = {
         id: newMessage._id || newMessage.id,
@@ -202,11 +211,15 @@ export function ChatWindow({
       if (!existingMessages.includes(formattedMessage.id)) {
         dispatch(
           sendMessage({
-            friendId: friend._id,
+            friendId: newMessage.sender._id || newMessage.sender.id,
             message: formattedMessage,
           })
         );
       }
+
+      //if not then mark it as processed now.
+      // Mark as processed
+      processedMessageIds.current.add(messageId);
 
       // Mark message as read if we're the receiver
       if (formattedMessage.receiverId === currentUserId) {
@@ -271,6 +284,7 @@ export function ChatWindow({
     setMessage("");
 
     try {
+      log("⏳ Temp message being dispatched:", tempMessage);
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/open-chat`,
         { content: message, receiverId: friend._id },
@@ -279,7 +293,7 @@ export function ChatWindow({
 
       // The actual message with server-generated ID
       const serverMessage = response.data.data.message;
-      console.log(serverMessage);
+      log("📤 Sent message via Axios:", serverMessage);
       //when the server sends the message we replace the server message from our temp message.
       dispatch(
         replaceTempMessage({

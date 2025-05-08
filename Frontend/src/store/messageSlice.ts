@@ -69,7 +69,7 @@ const messageSlice = createSlice({
     replaceTempMessage: (state, action) => {
       const { friendId, tempId, actualMessage } = action.payload;
       const messages = state.messages[friendId] || [];
-
+      console.log("🧩 Replacing temp message:", { tempId, actualMessage });
       const index = messages.findIndex((msg) => msg.id === tempId);
       if (index !== -1) {
         //if the temp msg exists
