@@ -1,470 +1,470 @@
-// import { useEffect, useState, useRef } from "react";
-// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
-// import { Send, ChevronLeft, Ban, UserMinus } from "lucide-react";
-// import axios from "axios";
-// import {
-//   fetchMessageFailure,
-//   fetchMessageStart,
-//   fetchMessageSuccess,
-//   markMessageRead,
-//   sendMessage,
-// } from "@/store/messageSlice";
-// import { useDispatch, useSelector } from "react-redux";
-// import { RootState } from "@/store/store";
-// import { getSocket } from "@/hooks/socket";
-// import { useToast } from "@/hooks/use-toast";
-// import { removeFriend } from "@/store/friendSlice";
+// // import { useEffect, useState, useRef } from "react";
+// // import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// // import { Button } from "@/components/ui/button";
+// // import { Input } from "@/components/ui/input";
+// // import { Send, ChevronLeft, Ban, UserMinus } from "lucide-react";
+// // import axios from "axios";
+// // import {
+// //   fetchMessageFailure,
+// //   fetchMessageStart,
+// //   fetchMessageSuccess,
+// //   markMessageRead,
+// //   sendMessage,
+// // } from "@/store/messageSlice";
+// // import { useDispatch, useSelector } from "react-redux";
+// // import { RootState } from "@/store/store";
+// // import { getSocket } from "@/hooks/socket";
+// // import { useToast } from "@/hooks/use-toast";
+// // import { removeFriend } from "@/store/friendSlice";
 
-// interface Friend {
-//   _id: string;
-//   name: string;
-//   avatar?: string;
-//   status?: "online" | "offline";
-// }
+// // interface Friend {
+// //   _id: string;
+// //   name: string;
+// //   avatar?: string;
+// //   status?: "online" | "offline";
+// // }
 
-// interface ChatWindowProps {
-//   friend: Friend;
-//   currUser: string;
-//   onClose: () => void;
-//   isMobile?: boolean;
-// }
+// // interface ChatWindowProps {
+// //   friend: Friend;
+// //   currUser: string;
+// //   onClose: () => void;
+// //   isMobile?: boolean;
+// // }
 
-// interface MessageFromAPI {
-//   _id: string;
-//   sender: {
-//     _id: string;
-//     name: string;
-//   };
-//   receiver: {
-//     _id: string;
-//     name: string;
-//   };
-//   message: string;
-//   createdAt: string;
-//   isRead: boolean;
-//   isDelivered: boolean;
-// }
+// // interface MessageFromAPI {
+// //   _id: string;
+// //   sender: {
+// //     _id: string;
+// //     name: string;
+// //   };
+// //   receiver: {
+// //     _id: string;
+// //     name: string;
+// //   };
+// //   message: string;
+// //   createdAt: string;
+// //   isRead: boolean;
+// //   isDelivered: boolean;
+// // }
 
-// interface Message {
-//   id: string;
-//   senderId: string;
-//   receiverId: string;
-//   message: string;
-//   content?: string;
-//   timestamp: string;
-//   isRead: boolean;
-//   isDelivered: boolean;
-// }
+// // interface Message {
+// //   id: string;
+// //   senderId: string;
+// //   receiverId: string;
+// //   message: string;
+// //   content?: string;
+// //   timestamp: string;
+// //   isRead: boolean;
+// //   isDelivered: boolean;
+// // }
 
-// export function ChatWindow({
-//   friend,
-//   onClose,
-//   currUser,
-//   isMobile = false,
-// }: ChatWindowProps) {
-//   const [message, setMessage] = useState("");
-//   const dispatch = useDispatch();
-//   const { toast } = useToast();
-//   const messagesEndRef = useRef<HTMLDivElement>(null);
-//   const currentUserId = currUser;
-//   const socketRef = useRef(getSocket());
+// // export function ChatWindow({
+// //   friend,
+// //   onClose,
+// //   currUser,
+// //   isMobile = false,
+// // }: ChatWindowProps) {
+// //   const [message, setMessage] = useState("");
+// //   const dispatch = useDispatch();
+// //   const { toast } = useToast();
+// //   const messagesEndRef = useRef<HTMLDivElement>(null);
+// //   const currentUserId = currUser;
+// //   const socketRef = useRef(getSocket());
 
-//   // Track processed message IDs to prevent duplicates
-//   const processedMessageIds = useRef(new Set());
+// //   // Track processed message IDs to prevent duplicates
+// //   const processedMessageIds = useRef(new Set());
 
-//   const messages = useSelector(
-//     (state: RootState) => state.message.messages[friend._id] || []
-//   ) as Message[];
+// //   const messages = useSelector(
+// //     (state: RootState) => state.message.messages[friend._id] || []
+// //   ) as Message[];
 
-//   const scrollToBottom = () => {
-//     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-//   };
+// //   const scrollToBottom = () => {
+// //     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+// //   };
 
-//   useEffect(() => {
-//     scrollToBottom();
-//   }, [messages]);
+// //   useEffect(() => {
+// //     scrollToBottom();
+// //   }, [messages]);
 
-//   // Fetch messages only once when component mounts or friend changes
-//   useEffect(() => {
-//     const fetchMessages = async () => {
-//       try {
-//         dispatch(fetchMessageStart());
+// //   // Fetch messages only once when component mounts or friend changes
+// //   useEffect(() => {
+// //     const fetchMessages = async () => {
+// //       try {
+// //         dispatch(fetchMessageStart());
 
-//         const response = await axios.get(
-//           `${
-//             import.meta.env.VITE_BACKEND_URL
-//           }/api/v1/users/get-all-messages?friendId=${friend._id}`,
-//           { withCredentials: true }
-//         );
+// //         const response = await axios.get(
+// //           `${
+// //             import.meta.env.VITE_BACKEND_URL
+// //           }/api/v1/users/get-all-messages?friendId=${friend._id}`,
+// //           { withCredentials: true }
+// //         );
 
-//         // Converting the response
-//         const formattedMessages = response.data.data.map(
-//           (msg: MessageFromAPI) => {
-//             const formattedMsg = {
-//               id: msg._id,
-//               senderId: msg.sender._id,
-//               receiverId: msg.receiver._id,
-//               message: msg.message,
-//               timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
-//                 hour: "2-digit",
-//                 minute: "2-digit",
-//               }),
-//               isRead: Boolean(msg.isRead),
-//               isDelivered: Boolean(msg.isDelivered),
-//             };
+// //         // Converting the response
+// //         const formattedMessages = response.data.data.map(
+// //           (msg: MessageFromAPI) => {
+// //             const formattedMsg = {
+// //               id: msg._id,
+// //               senderId: msg.sender._id,
+// //               receiverId: msg.receiver._id,
+// //               message: msg.message,
+// //               timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
+// //                 hour: "2-digit",
+// //                 minute: "2-digit",
+// //               }),
+// //               isRead: Boolean(msg.isRead),
+// //               isDelivered: Boolean(msg.isDelivered),
+// //             };
 
-//             // Add to processed IDs to avoid duplicates from socket
-//             processedMessageIds.current.add(formattedMsg.id);
+// //             // Add to processed IDs to avoid duplicates from socket
+// //             processedMessageIds.current.add(formattedMsg.id);
 
-//             return formattedMsg;
-//           }
-//         );
+// //             return formattedMsg;
+// //           }
+// //         );
 
-//         dispatch(
-//           fetchMessageSuccess({
-//             friendId: friend._id,
-//             messages: formattedMessages,
-//           })
-//         );
-//       } catch (err) {
-//         console.error("Chat Window error: ", err);
-//         dispatch(
-//           fetchMessageFailure({
-//             error:
-//               err instanceof Error ? err.message : "Failed to fetch messages",
-//           })
-//         );
+// //         dispatch(
+// //           fetchMessageSuccess({
+// //             friendId: friend._id,
+// //             messages: formattedMessages,
+// //           })
+// //         );
+// //       } catch (err) {
+// //         console.error("Chat Window error: ", err);
+// //         dispatch(
+// //           fetchMessageFailure({
+// //             error:
+// //               err instanceof Error ? err.message : "Failed to fetch messages",
+// //           })
+// //         );
 
-//         toast.error("Error", {
-//           description: "Failed to fetch messages",
-//         });
-//       }
-//     };
+// //         toast.error("Error", {
+// //           description: "Failed to fetch messages",
+// //         });
+// //       }
+// //     };
 
-//     fetchMessages();
+// //     fetchMessages();
 
-//     // Clear processed message IDs when changing friends
-//     processedMessageIds.current = new Set();
-//   }, [dispatch, friend._id, toast]);
+// //     // Clear processed message IDs when changing friends
+// //     processedMessageIds.current = new Set();
+// //   }, [dispatch, friend._id, toast]);
 
-//   // Set up socket listeners separately, with proper cleanup
-//   useEffect(() => {
-//     const socket = socketRef.current;
+// //   // Set up socket listeners separately, with proper cleanup
+// //   useEffect(() => {
+// //     const socket = socketRef.current;
 
-//     // Make sure we're connected
-//     if (!socket.connected) {
-//       socket.connect();
-//     }
+// //     // Make sure we're connected
+// //     if (!socket.connected) {
+// //       socket.connect();
+// //     }
 
-//     // Function to handle new messages from socket
-//     const handleNewMessage = (newMessage: any) => {
-//       console.log("💬 New live message received:", newMessage);
+// //     // Function to handle new messages from socket
+// //     const handleNewMessage = (newMessage: any) => {
+// //       console.log("💬 New live message received:", newMessage);
 
-//       // Create a consistent message ID
-//       const messageId = newMessage._id || newMessage.id;
+// //       // Create a consistent message ID
+// //       const messageId = newMessage._id || newMessage.id;
 
-//       // Only process if message is for this chat
-//       const isRelevantMessage =
-//         newMessage.sender._id === friend._id ||
-//         newMessage.sender === friend._id ||
-//         newMessage.receiver._id === friend._id ||
-//         newMessage.receiver === friend._id;
+// //       // Only process if message is for this chat
+// //       const isRelevantMessage =
+// //         newMessage.sender._id === friend._id ||
+// //         newMessage.sender === friend._id ||
+// //         newMessage.receiver._id === friend._id ||
+// //         newMessage.receiver === friend._id;
 
-//       // Skip if we've already processed this message or it's not relevant
-//       if (!isRelevantMessage || processedMessageIds.current.has(messageId)) {
-//         return;
-//       }
+// //       // Skip if we've already processed this message or it's not relevant
+// //       if (!isRelevantMessage || processedMessageIds.current.has(messageId)) {
+// //         return;
+// //       }
 
-//       // Mark as processed
-//       processedMessageIds.current.add(messageId);
+// //       // Mark as processed
+// //       processedMessageIds.current.add(messageId);
 
-//       const formattedMessage = {
-//         id: messageId,
-//         senderId: newMessage.sender._id || newMessage.sender,
-//         receiverId: newMessage.receiver._id || newMessage.receiver,
-//         message: newMessage.message || newMessage.content,
-//         timestamp: new Date(
-//           newMessage.createdAt || Date.now()
-//         ).toLocaleTimeString([], {
-//           hour: "2-digit",
-//           minute: "2-digit",
-//         }),
-//         isRead: Boolean(newMessage.isRead),
-//         isDelivered: Boolean(newMessage.isDelivered),
-//       };
+// //       const formattedMessage = {
+// //         id: messageId,
+// //         senderId: newMessage.sender._id || newMessage.sender,
+// //         receiverId: newMessage.receiver._id || newMessage.receiver,
+// //         message: newMessage.message || newMessage.content,
+// //         timestamp: new Date(
+// //           newMessage.createdAt || Date.now()
+// //         ).toLocaleTimeString([], {
+// //           hour: "2-digit",
+// //           minute: "2-digit",
+// //         }),
+// //         isRead: Boolean(newMessage.isRead),
+// //         isDelivered: Boolean(newMessage.isDelivered),
+// //       };
 
-//       dispatch(
-//         sendMessage({
-//           friendId: friend._id,
-//           message: formattedMessage,
-//         })
-//       );
+// //       dispatch(
+// //         sendMessage({
+// //           friendId: friend._id,
+// //           message: formattedMessage,
+// //         })
+// //       );
 
-//       // Mark message as read if we're the receiver
-//       if (formattedMessage.receiverId === currentUserId) {
-//         socket.emit("message_read", { messageId: formattedMessage.id });
-//       }
-//     };
+// //       // Mark message as read if we're the receiver
+// //       if (formattedMessage.receiverId === currentUserId) {
+// //         socket.emit("message_read", { messageId: formattedMessage.id });
+// //       }
+// //     };
 
-//     // Function to handle read acknowledgments
-//     const handleMessageReadAck = ({
-//       messageId,
-//       friendId,
-//     }: {
-//       messageId: string;
-//       friendId: string;
-//     }) => {
-//       if (friendId === currentUserId) {
-//         dispatch(markMessageRead({ friendId: friend._id, messageId }));
-//       }
-//     };
+// //     // Function to handle read acknowledgments
+// //     const handleMessageReadAck = ({
+// //       messageId,
+// //       friendId,
+// //     }: {
+// //       messageId: string;
+// //       friendId: string;
+// //     }) => {
+// //       if (friendId === currentUserId) {
+// //         dispatch(markMessageRead({ friendId: friend._id, messageId }));
+// //       }
+// //     };
 
-//     // Add event listeners
-//     socket.on("new-message", handleNewMessage);
-//     socket.on("message_read_ack", handleMessageReadAck);
+// //     // Add event listeners
+// //     socket.on("new-message", handleNewMessage);
+// //     socket.on("message_read_ack", handleMessageReadAck);
 
-//     // Clean up
-//     return () => {
-//       socket.off("new-message", handleNewMessage);
-//       socket.off("message_read_ack", handleMessageReadAck);
-//     };
-//   }, [dispatch, friend._id, currentUserId]);
+// //     // Clean up
+// //     return () => {
+// //       socket.off("new-message", handleNewMessage);
+// //       socket.off("message_read_ack", handleMessageReadAck);
+// //     };
+// //   }, [dispatch, friend._id, currentUserId]);
 
-//   const handleSendMessage = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     if (!message.trim()) return;
+// //   const handleSendMessage = async (e: React.FormEvent) => {
+// //     e.preventDefault();
+// //     if (!message.trim()) return;
 
-//     // Create temporary message for UI
-//     const tempId = `temp-${Date.now()}`;
-//     const tempMessage = {
-//       id: tempId,
-//       senderId: currentUserId,
-//       receiverId: friend._id,
-//       message: message,
-//       timestamp: new Date().toLocaleTimeString([], {
-//         hour: "2-digit",
-//         minute: "2-digit",
-//       }),
-//       isRead: false,
-//       isDelivered: false,
-//     };
+// //     // Create temporary message for UI
+// //     const tempId = `temp-${Date.now()}`;
+// //     const tempMessage = {
+// //       id: tempId,
+// //       senderId: currentUserId,
+// //       receiverId: friend._id,
+// //       message: message,
+// //       timestamp: new Date().toLocaleTimeString([], {
+// //         hour: "2-digit",
+// //         minute: "2-digit",
+// //       }),
+// //       isRead: false,
+// //       isDelivered: false,
+// //     };
 
-//     // Add to processed IDs to avoid duplicates
-//     processedMessageIds.current.add(tempId);
+// //     // Add to processed IDs to avoid duplicates
+// //     processedMessageIds.current.add(tempId);
 
-//     // Add to Redux immediately for responsive UI
-//     dispatch(
-//       sendMessage({
-//         friendId: friend._id,
-//         message: tempMessage,
-//       })
-//     );
+// //     // Add to Redux immediately for responsive UI
+// //     dispatch(
+// //       sendMessage({
+// //         friendId: friend._id,
+// //         message: tempMessage,
+// //       })
+// //     );
 
-//     setMessage("");
+// //     setMessage("");
 
-//     try {
-//       const response = await axios.post(
-//         `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/open-chat`,
-//         { content: message, receiverId: friend._id },
-//         { withCredentials: true }
-//       );
+// //     try {
+// //       const response = await axios.post(
+// //         `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/open-chat`,
+// //         { content: message, receiverId: friend._id },
+// //         { withCredentials: true }
+// //       );
 
-//       // The actual message with server-generated ID
-//       const serverMessage = response.data.data.message;
+// //       // The actual message with server-generated ID
+// //       const serverMessage = response.data.data.message;
 
-//       // Add server ID to processed IDs to avoid duplicates from socket
-//       if (serverMessage && serverMessage._id) {
-//         processedMessageIds.current.add(serverMessage._id);
-//       }
-//     } catch (error) {
-//       console.error("Failed to send message:", error);
-//       toast.error("Error", {
-//         description: "Failed to send Message",
-//       });
-//     }
-//   };
+// //       // Add server ID to processed IDs to avoid duplicates from socket
+// //       if (serverMessage && serverMessage._id) {
+// //         processedMessageIds.current.add(serverMessage._id);
+// //       }
+// //     } catch (error) {
+// //       console.error("Failed to send message:", error);
+// //       toast.error("Error", {
+// //         description: "Failed to send Message",
+// //       });
+// //     }
+// //   };
 
-//   const handleBlock = () => {
-//     const friendId = friend._id;
-//     axios
-//       .get(
-//         `${
-//           import.meta.env.VITE_BACKEND_URL
-//         }/api/v1/users/block-friend?blockUserId=${friendId}`,
-//         {
-//           withCredentials: true,
-//         }
-//       )
-//       .then(() => {
-//         dispatch(removeFriend({ friendId }));
-//         const storedFriends = localStorage.getItem("friends");
-//         if (storedFriends) {
-//           const friendsList = JSON.parse(storedFriends);
-//           const updatedFriendsList = friendsList.filter(
-//             (id: string) => id !== friendId
-//           );
-//           localStorage.setItem("friends", JSON.stringify(updatedFriendsList));
-//         }
+// //   const handleBlock = () => {
+// //     const friendId = friend._id;
+// //     axios
+// //       .get(
+// //         `${
+// //           import.meta.env.VITE_BACKEND_URL
+// //         }/api/v1/users/block-friend?blockUserId=${friendId}`,
+// //         {
+// //           withCredentials: true,
+// //         }
+// //       )
+// //       .then(() => {
+// //         dispatch(removeFriend({ friendId }));
+// //         const storedFriends = localStorage.getItem("friends");
+// //         if (storedFriends) {
+// //           const friendsList = JSON.parse(storedFriends);
+// //           const updatedFriendsList = friendsList.filter(
+// //             (id: string) => id !== friendId
+// //           );
+// //           localStorage.setItem("friends", JSON.stringify(updatedFriendsList));
+// //         }
 
-//         toast.success("Success", {
-//           description: "User has been Blocked successfully",
-//         });
+// //         toast.success("Success", {
+// //           description: "User has been Blocked successfully",
+// //         });
 
-//         if (onClose) {
-//           onClose();
-//         }
-//       })
-//       .catch((err) => {
-//         console.log(err);
-//         toast.error("Error", {
-//           description: err.response?.data?.message || "Failed to block user",
-//         });
-//       });
-//   };
+// //         if (onClose) {
+// //           onClose();
+// //         }
+// //       })
+// //       .catch((err) => {
+// //         console.log(err);
+// //         toast.error("Error", {
+// //           description: err.response?.data?.message || "Failed to block user",
+// //         });
+// //       });
+// //   };
 
-//   const handleRemove = () => {
-//     const friendId = friend._id;
-//     axios
-//       .post(
-//         `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/remove-friend`,
-//         { friendId },
-//         {
-//           withCredentials: true,
-//         }
-//       )
-//       .then(() => {
-//         dispatch(removeFriend({ friendId }));
-//         const storedFriends = localStorage.getItem("friends");
-//         if (storedFriends) {
-//           const friendsList = JSON.parse(storedFriends);
-//           const updatedFriendsList = friendsList.filter(
-//             (id: string) => id !== friendId
-//           );
-//           localStorage.setItem("friends", JSON.stringify(updatedFriendsList));
-//         }
+// //   const handleRemove = () => {
+// //     const friendId = friend._id;
+// //     axios
+// //       .post(
+// //         `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/remove-friend`,
+// //         { friendId },
+// //         {
+// //           withCredentials: true,
+// //         }
+// //       )
+// //       .then(() => {
+// //         dispatch(removeFriend({ friendId }));
+// //         const storedFriends = localStorage.getItem("friends");
+// //         if (storedFriends) {
+// //           const friendsList = JSON.parse(storedFriends);
+// //           const updatedFriendsList = friendsList.filter(
+// //             (id: string) => id !== friendId
+// //           );
+// //           localStorage.setItem("friends", JSON.stringify(updatedFriendsList));
+// //         }
 
-//         toast.success("Success", {
-//           description: "User has been removed from friend list",
-//         });
-//         if (onClose) {
-//           onClose();
-//         }
-//       })
-//       .catch((err) => {
-//         console.log(err);
-//         toast.error("Error", {
-//           description: err.response?.data?.message || "Failed to remove friend",
-//         });
-//       });
-//   };
+// //         toast.success("Success", {
+// //           description: "User has been removed from friend list",
+// //         });
+// //         if (onClose) {
+// //           onClose();
+// //         }
+// //       })
+// //       .catch((err) => {
+// //         console.log(err);
+// //         toast.error("Error", {
+// //           description: err.response?.data?.message || "Failed to remove friend",
+// //         });
+// //       });
+// //   };
 
-//   return (
-//     <div className="flex flex-col h-full">
-//       {/* Chat Header */}
-//       <div className="flex items-center justify-between p-4 border-b">
-//         <div className="flex items-center space-x-3">
-//           {isMobile && (
-//             <Button
-//               variant="ghost"
-//               size="icon"
-//               onClick={onClose}
-//               className="mr-1"
-//             >
-//               <ChevronLeft className="h-5 w-5" />
-//             </Button>
-//           )}
-//           <Avatar>
-//             <AvatarImage src={friend.avatar} />
-//             <AvatarFallback>
-//               {friend.name
-//                 .split(" ")
-//                 .map((n) => n[0])
-//                 .join("")
-//                 .toUpperCase()}
-//             </AvatarFallback>
-//           </Avatar>
-//           <div>
-//             <h3 className="font-medium text-sm">{friend.name}</h3>
-//             {friend.status && (
-//               <p className="text-xs text-muted-foreground capitalize">
-//                 {friend.status}
-//               </p>
-//             )}
-//           </div>
-//         </div>
-//         <div className="flex items-center space-x-4">
-//           <Button
-//             variant="outline"
-//             size="sm"
-//             className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-600 border-red-300 font-medium px-3"
-//             onClick={handleBlock}
-//           >
-//             <Ban className="h-4 w-4" />
-//             Block
-//           </Button>
-//           <Button
-//             variant="outline"
-//             size="sm"
-//             className="flex items-center gap-1 bg-purple-100 hover:bg-purple-200 text-purple-600 border-purple-300 font-medium px-3"
-//             onClick={handleRemove}
-//           >
-//             <UserMinus className="h-4 w-4" />
-//             Remove
-//           </Button>
-//         </div>
-//       </div>
+// //   return (
+// //     <div className="flex flex-col h-full">
+// //       {/* Chat Header */}
+// //       <div className="flex items-center justify-between p-4 border-b">
+// //         <div className="flex items-center space-x-3">
+// //           {isMobile && (
+// //             <Button
+// //               variant="ghost"
+// //               size="icon"
+// //               onClick={onClose}
+// //               className="mr-1"
+// //             >
+// //               <ChevronLeft className="h-5 w-5" />
+// //             </Button>
+// //           )}
+// //           <Avatar>
+// //             <AvatarImage src={friend.avatar} />
+// //             <AvatarFallback>
+// //               {friend.name
+// //                 .split(" ")
+// //                 .map((n) => n[0])
+// //                 .join("")
+// //                 .toUpperCase()}
+// //             </AvatarFallback>
+// //           </Avatar>
+// //           <div>
+// //             <h3 className="font-medium text-sm">{friend.name}</h3>
+// //             {friend.status && (
+// //               <p className="text-xs text-muted-foreground capitalize">
+// //                 {friend.status}
+// //               </p>
+// //             )}
+// //           </div>
+// //         </div>
+// //         <div className="flex items-center space-x-4">
+// //           <Button
+// //             variant="outline"
+// //             size="sm"
+// //             className="flex items-center gap-1 bg-red-100 hover:bg-red-200 text-red-600 border-red-300 font-medium px-3"
+// //             onClick={handleBlock}
+// //           >
+// //             <Ban className="h-4 w-4" />
+// //             Block
+// //           </Button>
+// //           <Button
+// //             variant="outline"
+// //             size="sm"
+// //             className="flex items-center gap-1 bg-purple-100 hover:bg-purple-200 text-purple-600 border-purple-300 font-medium px-3"
+// //             onClick={handleRemove}
+// //           >
+// //             <UserMinus className="h-4 w-4" />
+// //             Remove
+// //           </Button>
+// //         </div>
+// //       </div>
 
-//       {/* Messages */}
-//       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-//         {messages.map((msg: Message) => {
-//           const isCurrentUserMessage = msg.senderId === currentUserId;
+// //       {/* Messages */}
+// //       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+// //         {messages.map((msg: Message) => {
+// //           const isCurrentUserMessage = msg.senderId === currentUserId;
 
-//           return (
-//             <div
-//               key={msg.id}
-//               className={`flex ${
-//                 isCurrentUserMessage ? "justify-end" : "justify-start"
-//               }`}
-//             >
-//               <div
-//                 className={`max-w-xs px-4 py-2 rounded-lg shadow ${
-//                   isCurrentUserMessage
-//                     ? "bg-blue-300 text-black rounded-br-none"
-//                     : "bg-gray-200 text-black rounded-bl-none"
-//                 }`}
-//               >
-//                 <p>{msg.message}</p>
-//                 <span className="text-xs text-muted-foreground block mt-1 text-right">
-//                   {msg.timestamp}
-//                 </span>
-//               </div>
-//             </div>
-//           );
-//         })}
-//         <div ref={messagesEndRef} />
-//       </div>
+// //           return (
+// //             <div
+// //               key={msg.id}
+// //               className={`flex ${
+// //                 isCurrentUserMessage ? "justify-end" : "justify-start"
+// //               }`}
+// //             >
+// //               <div
+// //                 className={`max-w-xs px-4 py-2 rounded-lg shadow ${
+// //                   isCurrentUserMessage
+// //                     ? "bg-blue-300 text-black rounded-br-none"
+// //                     : "bg-gray-200 text-black rounded-bl-none"
+// //                 }`}
+// //               >
+// //                 <p>{msg.message}</p>
+// //                 <span className="text-xs text-muted-foreground block mt-1 text-right">
+// //                   {msg.timestamp}
+// //                 </span>
+// //               </div>
+// //             </div>
+// //           );
+// //         })}
+// //         <div ref={messagesEndRef} />
+// //       </div>
 
-//       {/* Message Input */}
-//       <form
-//         onSubmit={handleSendMessage}
-//         className="p-4 border-t flex items-center space-x-2"
-//       >
-//         <Input
-//           type="text"
-//           placeholder="Type a message..."
-//           value={message}
-//           onChange={(e) => setMessage(e.target.value)}
-//           className="flex-1"
-//         />
-//         <Button type="submit" size="icon" disabled={!message.trim()}>
-//           <Send className="h-5 w-5" />
-//         </Button>
-//       </form>
-//     </div>
-//   );
-// }
+// //       {/* Message Input */}
+// //       <form
+// //         onSubmit={handleSendMessage}
+// //         className="p-4 border-t flex items-center space-x-2"
+// //       >
+// //         <Input
+// //           type="text"
+// //           placeholder="Type a message..."
+// //           value={message}
+// //           onChange={(e) => setMessage(e.target.value)}
+// //           className="flex-1"
+// //         />
+// //         <Button type="submit" size="icon" disabled={!message.trim()}>
+// //           <Send className="h-5 w-5" />
+// //         </Button>
+// //       </form>
+// //     </div>
+// //   );
+// // }
 
 import { useEffect, useState, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -485,6 +485,7 @@ import { getSocket } from "@/hooks/socket";
 import { useToast } from "@/hooks/use-toast";
 import { removeFriend } from "@/store/friendSlice";
 
+// Interface definitions
 interface Friend {
   _id: string;
   name: string;
@@ -526,17 +527,62 @@ interface Message {
   isDelivered: boolean;
 }
 
-// Create a global message tracking Map to ensure uniqueness across component remounts
-// This is necessary because in production, React may be remounting components more frequently
-// Extend the Window interface to include _processedMessageMap
+// Global message tracking system
+// Using a more robust approach with a timestamp-based deduplication strategy
 declare global {
   interface Window {
-    _processedMessageMap?: Map<string, number>;
+    _messageTracker: {
+      processedMessages: Map<string, number>;
+      chatInstances: Set<string>;
+      registerMessage: (chatId: string, messageId: string) => boolean;
+      isProcessed: (chatId: string, messageId: string) => boolean;
+      cleanup: () => void;
+    };
   }
 }
 
-if (typeof window !== "undefined" && !window._processedMessageMap) {
-  window._processedMessageMap = new Map();
+// Initialize global message tracker
+if (typeof window !== "undefined") {
+  if (!window._messageTracker) {
+    window._messageTracker = {
+      processedMessages: new Map<string, number>(),
+      chatInstances: new Set<string>(),
+
+      // Register a message and return true if it's new
+      registerMessage: (chatId: string, messageId: string): boolean => {
+        const key = `${chatId}:${messageId}`;
+        if (window._messageTracker.processedMessages.has(key)) {
+          return false;
+        }
+        window._messageTracker.processedMessages.set(key, Date.now());
+        return true;
+      },
+
+      // Check if a message has been processed
+      isProcessed: (chatId: string, messageId: string): boolean => {
+        const key = `${chatId}:${messageId}`;
+        return window._messageTracker.processedMessages.has(key);
+      },
+
+      // Remove old entries (older than 1 hour)
+      cleanup: () => {
+        const oneHourAgo = Date.now() - 3600000;
+        for (const [
+          key,
+          timestamp,
+        ] of window._messageTracker.processedMessages.entries()) {
+          if (timestamp < oneHourAgo) {
+            window._messageTracker.processedMessages.delete(key);
+          }
+        }
+      },
+    };
+
+    // Set up periodic cleanup
+    setInterval(() => {
+      window._messageTracker.cleanup();
+    }, 300000); // Run cleanup every 5 minutes
+  }
 }
 
 export function ChatWindow({
@@ -553,92 +599,109 @@ export function ChatWindow({
   const socketRef = useRef(getSocket());
   const [socketConnected, setSocketConnected] = useState(false);
 
-  // We'll use component instance id to help debug remounting issues
-  const instanceIdRef = useRef(
+  // Chat identifier
+  const chatId = `${currentUserId}-${friend._id}`;
+
+  // Component instance identifier (for debugging)
+  const instanceId = useRef(
     `chat-${Math.random().toString(36).substring(2, 9)}`
   );
 
-  // Use both a local ref and the global window object for message tracking
-  const processedMessageIdsRef = useRef(new Set());
+  // Track if initial messages have been loaded
+  const initialMessagesLoaded = useRef(false);
+
+  // A list of message IDs that we've already dispatched to Redux
+  const dispatchedMessageIds = useRef<Set<string>>(new Set());
+
+  // Debug logging with component instance info
+  const debug = (message: string, data?: any) => {
+    console.log(
+      `[${instanceId.current} | ${chatId}] ${message}`,
+      data !== undefined ? data : ""
+    );
+  };
 
   // Access the messages from Redux
   const messages = useSelector(
     (state: RootState) => state.message.messages[friend._id] || []
   ) as Message[];
 
-  // Create a friendly name for this chat for debugging
-  const chatName = `${currentUserId}-${friend._id}`;
-
-  // Debug log with instance info
-  const debugLog = (message: string, data?: any) => {
-    console.log(
-      `[${instanceIdRef.current} | ${chatName}] ${message}`,
-      data || ""
-    );
-  };
-
+  // Register this chat instance when mounted
   useEffect(() => {
-    debugLog("Component mounted");
+    debug("Component mounted");
+
+    if (window._messageTracker) {
+      window._messageTracker.chatInstances.add(chatId);
+    }
 
     return () => {
-      debugLog("Component unmounted");
+      debug("Component unmounted");
+      if (window._messageTracker) {
+        window._messageTracker.chatInstances.delete(chatId);
+      }
     };
-  }, []);
+  }, [chatId]);
 
+  // Helper function to handle scrolling to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Helper to check if a message should be processed
-  const shouldProcessMessage = (messageId: string) => {
-    // Check both local and global maps
-    if (processedMessageIdsRef.current.has(messageId)) {
-      debugLog(`Message ${messageId} already processed locally`);
-      return false;
-    }
-
-    if (window._processedMessageMap?.has(`${chatName}-${messageId}`)) {
-      debugLog(`Message ${messageId} already processed globally`);
-      return false;
-    }
-
-    // Mark as processed in both places
-    processedMessageIdsRef.current.add(messageId);
-    (window._processedMessageMap ??= new Map()).set(
-      `${chatName}-${messageId}`,
-      Date.now()
-    );
-
-    // Clean up old messages from global map (keep only last hour)
-    const oneHourAgo = Date.now() - 3600000;
-    for (const [key, timestamp] of window._processedMessageMap.entries()) {
-      if (timestamp < oneHourAgo) {
-        window._processedMessageMap.delete(key);
+  // Check if we should process a message
+  const shouldProcessMessage = (messageId: string): boolean => {
+    // Use the global tracker to check if this message has been processed
+    if (window._messageTracker) {
+      if (window._messageTracker.isProcessed(chatId, messageId)) {
+        debug(`Message ${messageId} already processed`);
+        return false;
       }
+
+      // Register this message as processed
+      window._messageTracker.registerMessage(chatId, messageId);
+      return true;
     }
 
+    // Fallback if global tracker not available
+    if (dispatchedMessageIds.current.has(messageId)) {
+      debug(`Message ${messageId} already dispatched locally`);
+      return false;
+    }
+
+    dispatchedMessageIds.current.add(messageId);
     return true;
   };
 
-  // Set up socket connection and track its state
+  // Helper to safely dispatch a message to Redux only once
+  const safeDispatchMessage = (friendId: string, messageData: Message) => {
+    if (!dispatchedMessageIds.current.has(messageData.id)) {
+      debug(`Dispatching message to Redux: ${messageData.id}`);
+      dispatchedMessageIds.current.add(messageData.id);
+      dispatch(sendMessage({ friendId, message: messageData }));
+      return true;
+    }
+    return false;
+  };
+
+  // Set up socket connection
   useEffect(() => {
     const socket = socketRef.current;
 
     const handleConnect = () => {
-      debugLog("Socket connected");
+      debug("Socket connected");
       setSocketConnected(true);
     };
 
     const handleDisconnect = (reason: string | Error) => {
-      debugLog("Socket disconnected", reason);
+      debug("Socket disconnected", reason);
       setSocketConnected(false);
     };
 
-    // Make sure we're connected
+    // Connect if not already connected
     if (!socket.connected) {
       socket.connect();
     } else {
@@ -654,11 +717,17 @@ export function ChatWindow({
     };
   }, []);
 
-  // Fetch messages from API
+  // Fetch messages from API - only run once
   useEffect(() => {
+    // Skip if we've already loaded messages for this chat
+    if (initialMessagesLoaded.current) {
+      debug("Initial messages already loaded, skipping API fetch");
+      return;
+    }
+
     const fetchMessages = async () => {
       try {
-        debugLog("Fetching messages from API");
+        debug("Fetching messages from API");
         dispatch(fetchMessageStart());
 
         const response = await axios.get(
@@ -668,34 +737,45 @@ export function ChatWindow({
           { withCredentials: true }
         );
 
-        debugLog("API returned messages", response.data.data.length);
+        debug("API returned messages", response.data.data.length);
 
-        // Filter out duplicate messages
-        const formattedMessages = response.data.data
-          .map((msg: MessageFromAPI): Message => {
-            return {
-              id: msg._id,
-              senderId: msg.sender._id,
-              receiverId: msg.receiver._id,
-              message: msg.message,
-              timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              isRead: Boolean(msg.isRead),
-              isDelivered: Boolean(msg.isDelivered),
-            };
-          })
-          .filter((msg: Message) => shouldProcessMessage(msg.id));
+        // Process and deduplicate messages
+        const formattedMessages: Message[] = [];
 
-        debugLog("Unique messages to add", formattedMessages.length);
+        for (const msg of response.data.data) {
+          const messageObj: Message = {
+            id: msg._id,
+            senderId: msg.sender._id,
+            receiverId: msg.receiver._id,
+            message: msg.message,
+            timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isRead: Boolean(msg.isRead),
+            isDelivered: Boolean(msg.isDelivered),
+          };
 
-        dispatch(
-          fetchMessageSuccess({
-            friendId: friend._id,
-            messages: formattedMessages,
-          })
-        );
+          // Only add if not already processed
+          if (shouldProcessMessage(messageObj.id)) {
+            formattedMessages.push(messageObj);
+            dispatchedMessageIds.current.add(messageObj.id);
+          }
+        }
+
+        debug("Unique messages to add", formattedMessages.length);
+
+        if (formattedMessages.length > 0) {
+          dispatch(
+            fetchMessageSuccess({
+              friendId: friend._id,
+              messages: formattedMessages,
+            })
+          );
+        }
+
+        // Mark as loaded
+        initialMessagesLoaded.current = true;
       } catch (err) {
         console.error("Chat Window error: ", err);
         dispatch(
@@ -705,7 +785,7 @@ export function ChatWindow({
           })
         );
         toast.error("Error", {
-          description: "Failed to fetch Message",
+          description: "Failed to fetch messages",
         });
       }
     };
@@ -713,37 +793,37 @@ export function ChatWindow({
     fetchMessages();
   }, [dispatch, friend._id, toast]);
 
-  // Set up socket message listeners separately
+  // Handle socket messages
   useEffect(() => {
     const socket = socketRef.current;
 
-    debugLog("Setting up socket message listeners");
+    debug("Setting up socket message listeners");
 
-    // Function to handle new messages from socket
+    // Process new messages from socket
     const handleNewMessage = (newMessage: any) => {
-      debugLog("New socket message received", newMessage);
+      debug("New socket message received", newMessage);
 
-      // Create a consistent message ID
+      // Get message ID
       const messageId = newMessage._id || newMessage.id;
 
-      // Check if message is relevant for this chat
+      // Check if message is relevant to this chat
       const isRelevantMessage =
         newMessage.sender?._id === friend._id ||
         newMessage.sender === friend._id ||
         newMessage.receiver?._id === friend._id ||
         newMessage.receiver === friend._id;
 
-      debugLog(`Message relevance: ${isRelevantMessage}, ID: ${messageId}`);
+      debug(`Message relevance: ${isRelevantMessage}, ID: ${messageId}`);
 
       // Skip if not relevant or already processed
       if (!isRelevantMessage || !shouldProcessMessage(messageId)) {
         return;
       }
 
-      debugLog("Processing new unique message", messageId);
+      debug("Processing new unique message", messageId);
 
-      // Format message for Redux
-      const formattedMessage = {
+      // Format message
+      const formattedMessage: Message = {
         id: messageId,
         senderId: newMessage.sender?._id || newMessage.sender,
         receiverId: newMessage.receiver?._id || newMessage.receiver,
@@ -759,20 +839,15 @@ export function ChatWindow({
       };
 
       // Add to Redux
-      dispatch(
-        sendMessage({
-          friendId: friend._id,
-          message: formattedMessage,
-        })
-      );
+      safeDispatchMessage(friend._id, formattedMessage);
 
-      // Mark message as read if we're the receiver
+      // Mark as read if we're the receiver
       if (formattedMessage.receiverId === currentUserId) {
         socket.emit("message_read", { messageId: formattedMessage.id });
       }
     };
 
-    // Function to handle read acknowledgments
+    // Handle read receipts
     const handleMessageReadAck = ({
       messageId,
       friendId,
@@ -780,34 +855,34 @@ export function ChatWindow({
       messageId: string;
       friendId: string;
     }) => {
-      debugLog("Message read acknowledgment", { messageId, friendId });
+      debug("Message read acknowledgment", { messageId, friendId });
       if (friendId === currentUserId) {
         dispatch(markMessageRead({ friendId: friend._id, messageId }));
       }
     };
 
-    // Add event listeners with debugging
-    debugLog("Adding socket event listeners");
+    // Set up listeners
     socket.on("new-message", handleNewMessage);
     socket.on("message_read_ack", handleMessageReadAck);
 
     // Clean up
     return () => {
-      debugLog("Removing socket event listeners");
+      debug("Removing socket event listeners");
       socket.off("new-message", handleNewMessage);
       socket.off("message_read_ack", handleMessageReadAck);
     };
   }, [dispatch, friend._id, currentUserId]);
 
+  // Send a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
 
-    debugLog("Sending new message", message);
+    debug("Sending new message", message);
 
     // Create temporary message for UI
     const tempId = `temp-${Date.now()}`;
-    const tempMessage = {
+    const tempMessage: Message = {
       id: tempId,
       senderId: currentUserId,
       receiverId: friend._id,
@@ -820,58 +895,55 @@ export function ChatWindow({
       isDelivered: false,
     };
 
-    // Mark as processed
+    // Register message as processed
     shouldProcessMessage(tempId);
 
-    // Add to Redux for responsive UI
-    dispatch(
-      sendMessage({
-        friendId: friend._id,
-        message: tempMessage,
-      })
-    );
+    // Add to Redux
+    safeDispatchMessage(friend._id, tempMessage);
 
+    // Clear input
     setMessage("");
 
     try {
-      debugLog("Sending message to API");
+      debug("Sending message to API");
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/open-chat`,
         { content: message, receiverId: friend._id },
         { withCredentials: true }
       );
 
-      // The actual message with server-generated ID
+      // Get server-generated message
       const serverMessage = response.data.data.message;
-      debugLog("Server response for sent message", serverMessage);
+      debug("Server response for sent message", serverMessage);
 
-      // Add server ID to processed IDs to avoid duplicates
+      // Register server ID to prevent duplicates
       if (serverMessage && serverMessage._id) {
         shouldProcessMessage(serverMessage._id);
       }
     } catch (error) {
       console.error("Failed to send message:", error);
       toast.error("Error", {
-        description: "Failed to send Message",
+        description: "Failed to send message",
       });
     }
   };
 
+  // Block user
   const handleBlock = () => {
     const friendId = friend._id;
-    debugLog("Blocking user", friendId);
+    debug("Blocking user", friendId);
 
     axios
       .get(
         `${
           import.meta.env.VITE_BACKEND_URL
         }/api/v1/users/block-friend?blockUserId=${friendId}`,
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       )
       .then(() => {
         dispatch(removeFriend({ friendId }));
+
+        // Update localStorage
         const storedFriends = localStorage.getItem("friends");
         if (storedFriends) {
           const friendsList = JSON.parse(storedFriends);
@@ -884,6 +956,7 @@ export function ChatWindow({
         toast.success("Success", {
           description: "User has been blocked successfully",
         });
+
         if (onClose) {
           onClose();
         }
@@ -896,20 +969,21 @@ export function ChatWindow({
       });
   };
 
+  // Remove friend
   const handleRemove = () => {
     const friendId = friend._id;
-    debugLog("Removing friend", friendId);
+    debug("Removing friend", friendId);
 
     axios
       .post(
         `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/remove-friend`,
         { friendId },
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       )
       .then(() => {
         dispatch(removeFriend({ friendId }));
+
+        // Update localStorage
         const storedFriends = localStorage.getItem("friends");
         if (storedFriends) {
           const friendsList = JSON.parse(storedFriends);
@@ -930,7 +1004,7 @@ export function ChatWindow({
       .catch((err) => {
         console.error("Remove friend error:", err);
         toast.error("Error", {
-          description: err.response?.data?.message || "Failed to block user",
+          description: err.response?.data?.message || "Failed to remove friend",
         });
       });
   };
