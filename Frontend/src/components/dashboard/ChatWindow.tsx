@@ -467,6 +467,19 @@
 // // }
 
 import { useEffect, useState, useRef } from "react";
+
+// Extend the Window interface to include _messageTracker
+declare global {
+  interface Window {
+    _messageTracker?: {
+      processedMessages: Map<string, number>;
+      chatInstances: Set<string>;
+      registerMessage: (chatId: string, messageId: string) => boolean;
+      isProcessed: (chatId: string, messageId: string) => boolean;
+      cleanup: () => void;
+    };
+  }
+}
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -511,21 +524,7 @@ interface Message {
   isDelivered: boolean;
 }
 
-// Global message tracking system
-// Using a more robust approach with a timestamp-based deduplication strategy
-declare global {
-  interface Window {
-    _messageTracker: {
-      processedMessages: Map<string, number>;
-      chatInstances: Set<string>;
-      registerMessage: (chatId: string, messageId: string) => boolean;
-      isProcessed: (chatId: string, messageId: string) => boolean;
-      cleanup: () => void;
-    };
-  }
-}
-
-// Initialize global message tracker
+// Global message tracker implementation - improved version
 if (typeof window !== "undefined") {
   if (!window._messageTracker) {
     window._messageTracker = {
@@ -534,18 +533,20 @@ if (typeof window !== "undefined") {
 
       // Register a message and return true if it's new
       registerMessage: (chatId: string, messageId: string): boolean => {
+        if (!messageId) return false;
         const key = `${chatId}:${messageId}`;
-        if (window._messageTracker.processedMessages.has(key)) {
+        if (window._messageTracker?.processedMessages?.has(key)) {
           return false;
         }
-        window._messageTracker.processedMessages.set(key, Date.now());
+        window._messageTracker?.processedMessages?.set(key, Date.now());
         return true;
       },
 
       // Check if a message has been processed
       isProcessed: (chatId: string, messageId: string): boolean => {
+        if (!messageId) return true; // Consider undefined IDs as already processed
         const key = `${chatId}:${messageId}`;
-        return window._messageTracker.processedMessages.has(key);
+        return window._messageTracker?.processedMessages?.has(key) ?? false;
       },
 
       // Remove old entries (older than 1 hour)
@@ -554,9 +555,9 @@ if (typeof window !== "undefined") {
         for (const [
           key,
           timestamp,
-        ] of window._messageTracker.processedMessages.entries()) {
+        ] of window._messageTracker?.processedMessages?.entries() || []) {
           if (timestamp < oneHourAgo) {
-            window._messageTracker.processedMessages.delete(key);
+            window._messageTracker?.processedMessages?.delete(key);
           }
         }
       },
@@ -564,7 +565,7 @@ if (typeof window !== "undefined") {
 
     // Set up periodic cleanup
     setInterval(() => {
-      window._messageTracker.cleanup();
+      window._messageTracker?.cleanup();
     }, 300000); // Run cleanup every 5 minutes
   }
 }
@@ -792,9 +793,16 @@ export function ChatWindow({
     fetchMessages();
   }, [dispatch, friend._id, toast]);
 
-  // Handle socket messages
+  // Handle socket messages - with enhanced deduplication
   useEffect(() => {
     const socket = socketRef.current;
+
+    // Skip setting up duplicate listeners
+    const listenerAlreadySet = useRef(false);
+    if (listenerAlreadySet.current) {
+      return;
+    }
+    listenerAlreadySet.current = true;
 
     debug("Setting up socket message listeners");
 
