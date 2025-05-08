@@ -117,11 +117,11 @@ export function ChatWindow({
 
             // Add to processed IDs to avoid duplicates from socket
             processedMessageIds.current.add(formattedMsg.id);
-
             return formattedMsg;
           }
         );
 
+        //we have entered the data in auth.
         dispatch(
           fetchMessageSuccess({
             friendId: friend._id,
@@ -160,7 +160,7 @@ export function ChatWindow({
 
     // Function to handle new messages from socket
     const handleNewMessage = (newMessage: any) => {
-      console.log("💬 New live message received:", newMessage);
+      console.log("New live message received:", newMessage);
 
       // Create a consistent message ID
       const messageId = newMessage._id || newMessage.id;
@@ -172,16 +172,17 @@ export function ChatWindow({
         newMessage.receiver._id === friend._id ||
         newMessage.receiver === friend._id;
 
-      // Skip if we've already processed this message or it's not relevant
+      //Skiping the message if we have already processed this message
       if (!isRelevantMessage || processedMessageIds.current.has(messageId)) {
         return;
       }
 
+      //if not then mark it as processed now.
       // Mark as processed
       processedMessageIds.current.add(messageId);
 
       const formattedMessage = {
-        id: messageId,
+        id: newMessage._id || newMessage.id,
         senderId: newMessage.sender._id || newMessage.sender,
         receiverId: newMessage.receiver._id || newMessage.receiver,
         message: newMessage.message || newMessage.content,
@@ -240,31 +241,31 @@ export function ChatWindow({
     e.preventDefault();
     if (!message.trim()) return;
 
-    // Create temporary message for UI
-    const tempId = `temp-${Date.now()}`;
-    const tempMessage = {
-      id: tempId,
-      senderId: currentUserId,
-      receiverId: friend._id,
-      message: message,
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      isRead: false,
-      isDelivered: false,
-    };
+    // // Create temporary message for UI
+    // const tempId = `temp-${Date.now()}`;
+    // const tempMessage = {
+    //   id: tempId,
+    //   senderId: currentUserId,
+    //   receiverId: friend._id,
+    //   message: message,
+    //   timestamp: new Date().toLocaleTimeString([], {
+    //     hour: "2-digit",
+    //     minute: "2-digit",
+    //   }),
+    //   isRead: false,
+    //   isDelivered: false,
+    // };
 
-    // Check if the temporary message already exists in the Redux state
-    const existingTempMessages = messages.map((msg) => msg.id);
-    if (!existingTempMessages.includes(tempMessage.id)) {
-      dispatch(
-        sendMessage({
-          friendId: friend._id,
-          message: tempMessage,
-        })
-      );
-    }
+    // // Check if the temporary message already exists in the Redux state
+    // const existingTempMessages = messages.map((msg) => msg.id);
+    // if (!existingTempMessages.includes(tempMessage.id)) {
+    //   dispatch(
+    //     sendMessage({
+    //       friendId: friend._id,
+    //       message: tempMessage,
+    //     })
+    //   );
+    // }
 
     setMessage("");
 
@@ -281,23 +282,6 @@ export function ChatWindow({
       // Add server ID to processed IDs to avoid duplicates from socket
       if (serverMessage && serverMessage._id) {
         processedMessageIds.current.add(serverMessage._id);
-        // Replace the temporary message with the server response
-        if (serverMessage && serverMessage._id) {
-          dispatch(
-            sendMessage({
-              friendId: friend._id,
-              message: {
-                ...tempMessage,
-                id: serverMessage._id,
-                isRead: Boolean(serverMessage.isRead),
-                isDelivered: Boolean(serverMessage.isDelivered),
-              },
-            })
-          );
-
-          // Add server ID to processed IDs to avoid duplicates from socket
-          processedMessageIds.current.add(serverMessage._id);
-        }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
