@@ -65,14 +65,6 @@ export function ChatWindow({
   currUser,
   isMobile = false,
 }: ChatWindowProps) {
-  const isProd = import.meta.env.MODE === "production";
-  const isDebug = import.meta.env.VITE_DEBUG_LOGGING === "true";
-
-  const log = (...args: any[]) => {
-    if (isProd && isDebug) {
-      console.log("🔥 [PROD DEBUG]", ...args);
-    }
-  };
   const [message, setMessage] = useState("");
   const dispatch = useDispatch();
   const { toast } = useToast();
@@ -170,8 +162,8 @@ export function ChatWindow({
     // Function to handle new messages from socket
     const handleNewMessage = (newMessage: any) => {
       console.log("New live message received:", newMessage);
-      log("📥 Socket received message:", newMessage);
-      log("🔌 Socket connected:", socket.id);
+      console.log("📥 Socket received message:", newMessage);
+      console.log("🔌 Socket connected:", socket.id);
       // Create a consistent message ID
       const messageId = newMessage._id || newMessage.id;
 
@@ -284,7 +276,7 @@ export function ChatWindow({
     setMessage("");
 
     try {
-      log("⏳ Temp message being dispatched:", tempMessage);
+      console.log("⏳ Temp message being dispatched:", tempMessage);
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/v1/users/open-chat`,
         { content: message, receiverId: friend._id },
@@ -293,7 +285,7 @@ export function ChatWindow({
 
       // The actual message with server-generated ID
       const serverMessage = response.data.data.message;
-      log("📤 Sent message via Axios:", serverMessage);
+      console.log("📤 Sent message via Axios:", serverMessage);
       //when the server sends the message we replace the server message from our temp message.
       dispatch(
         replaceTempMessage({

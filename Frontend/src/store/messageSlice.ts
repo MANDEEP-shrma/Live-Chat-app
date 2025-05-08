@@ -49,10 +49,15 @@ const messageSlice = createSlice({
     },
     sendMessage: (state, action) => {
       //The message iam sending I have to put that in here also.
-      if (!state.messages[action.payload.friendId]) {
-        state.messages[action.payload.friendId] = [];
+      const { friendId, message } = action.payload;
+      const messages = state.messages[friendId] || [];
+
+      const exists = messages.some((msg) => msg.id === message.id);
+      if (!exists) {
+        messages.push(message);
       }
-      state.messages[action.payload.friendId].push(action.payload.message);
+
+      state.messages[friendId] = messages;
     },
     markMessageRead: (state, action) => {
       const friendMessages = state.messages[action.payload.friendId];
