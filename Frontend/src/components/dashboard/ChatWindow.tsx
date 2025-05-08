@@ -9,6 +9,7 @@ import {
   fetchMessageStart,
   fetchMessageSuccess,
   markMessageRead,
+  replaceTempMessage,
   sendMessage,
 } from "@/store/messageSlice";
 import { useDispatch, useSelector } from "react-redux";
@@ -241,31 +242,31 @@ export function ChatWindow({
     e.preventDefault();
     if (!message.trim()) return;
 
-    // // Create temporary message for UI
-    // const tempId = `temp-${Date.now()}`;
-    // const tempMessage = {
-    //   id: tempId,
-    //   senderId: currentUserId,
-    //   receiverId: friend._id,
-    //   message: message,
-    //   timestamp: new Date().toLocaleTimeString([], {
-    //     hour: "2-digit",
-    //     minute: "2-digit",
-    //   }),
-    //   isRead: false,
-    //   isDelivered: false,
-    // };
+    // Create temporary message for UI
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage = {
+      id: tempId,
+      senderId: currentUserId,
+      receiverId: friend._id,
+      message: message,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isRead: false,
+      isDelivered: false,
+    };
 
-    // // Check if the temporary message already exists in the Redux state
-    // const existingTempMessages = messages.map((msg) => msg.id);
-    // if (!existingTempMessages.includes(tempMessage.id)) {
-    //   dispatch(
-    //     sendMessage({
-    //       friendId: friend._id,
-    //       message: tempMessage,
-    //     })
-    //   );
-    // }
+    // Check if the temporary message already exists in the Redux state
+    const existingTempMessages = messages.map((msg) => msg.id);
+    if (!existingTempMessages.includes(tempMessage.id)) {
+      dispatch(
+        sendMessage({
+          friendId: friend._id,
+          message: tempMessage,
+        })
+      );
+    }
 
     setMessage("");
 
@@ -278,7 +279,28 @@ export function ChatWindow({
 
       // The actual message with server-generated ID
       const serverMessage = response.data.data.message;
-
+      console.log(serverMessage);
+      //when the server sends the message we replace the server message from our temp message.
+      dispatch(
+        replaceTempMessage({
+          friendId: friend._id,
+          tempId,
+          actualMessage: {
+            id: serverMessage._id,
+            senderId: serverMessage.sender._id || serverMessage.sender,
+            receiverId: serverMessage.receiver._id || serverMessage.receiver,
+            message: serverMessage.message,
+            timestamp: new Date(
+              serverMessage.createdAt || Date.now()
+            ).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isRead: false,
+            isDelivered: serverMessage.isDelivered,
+          },
+        })
+      );
       // Add server ID to processed IDs to avoid duplicates from socket
       if (serverMessage && serverMessage._id) {
         processedMessageIds.current.add(serverMessage._id);
