@@ -541,6 +541,7 @@ const viewOtherProfile = asyncHandler(async (req, res) => {
 
 const searchContacts = asyncHandler(async (req, res) => {
   const emailorPhone = req.query.emailorPhone;
+
   if (!emailorPhone) {
     throw new ApiError(400, "Please provide a valid email or phone number");
   }
@@ -561,6 +562,10 @@ const searchContacts = asyncHandler(async (req, res) => {
       404,
       "No user found with the provided email or phone number"
     );
+  }
+
+  if (user._id.toString() === req.user._id.toString()) {
+    throw new ApiError(400, "Why are you searching yourself?");
   }
 
   const currentUser = await User.findById(req.user._id).select(
