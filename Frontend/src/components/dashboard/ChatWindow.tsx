@@ -500,22 +500,6 @@ interface ChatWindowProps {
   isMobile?: boolean;
 }
 
-interface MessageFromAPI {
-  _id: string;
-  sender: {
-    _id: string;
-    name: string;
-  };
-  receiver: {
-    _id: string;
-    name: string;
-  };
-  message: string;
-  createdAt: string;
-  isRead: boolean;
-  isDelivered: boolean;
-}
-
 interface Message {
   id: string;
   senderId: string;
