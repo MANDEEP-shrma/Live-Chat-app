@@ -638,6 +638,11 @@ export function ChatWindow({
 
   // Check if we should process a message
   const shouldProcessMessage = (messageId: string): boolean => {
+    if (!messageId) {
+      debug("Skipping message with empty ID");
+      return false;
+    }
+
     // Use the global tracker to check if this message has been processed
     if (window._messageTracker) {
       if (window._messageTracker.isProcessed(chatId, messageId)) {
@@ -662,6 +667,11 @@ export function ChatWindow({
 
   // Helper to safely dispatch a message to Redux only once
   const safeDispatchMessage = (friendId: string, messageData: Message) => {
+    if (!messageData.id) {
+      debug("Cannot dispatch message without ID");
+      return false;
+    }
+
     if (!dispatchedMessageIds.current.has(messageData.id)) {
       debug(`Dispatching message to Redux: ${messageData.id}`);
       dispatchedMessageIds.current.add(messageData.id);
@@ -727,11 +737,16 @@ export function ChatWindow({
         const formattedMessages: Message[] = [];
 
         for (const msg of response.data.data) {
+          if (!msg._id) {
+            debug("Skipping message without _id", msg);
+            continue;
+          }
+
           const messageObj: Message = {
             id: msg._id,
-            senderId: msg.sender._id,
-            receiverId: msg.receiver._id,
-            message: msg.message,
+            senderId: msg.sender?._id || msg.sender,
+            receiverId: msg.receiver?._id || msg.receiver,
+            message: msg.message || msg.content || "",
             timestamp: new Date(msg.createdAt).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -787,15 +802,32 @@ export function ChatWindow({
     const handleNewMessage = (newMessage: any) => {
       debug("New socket message received", newMessage);
 
+      // Validate message has required fields
+      if (!newMessage) {
+        debug("Received empty message object");
+        return;
+      }
+
       // Get message ID
       const messageId = newMessage._id || newMessage.id;
 
+      if (!messageId) {
+        debug("Skipping message without ID", newMessage);
+        return;
+      }
+
+      // Safely extract sender and receiver IDs
+      const senderId = newMessage.sender?._id || newMessage.sender;
+      const receiverId = newMessage.receiver?._id || newMessage.receiver;
+
+      if (!senderId || !receiverId) {
+        debug("Skipping message with missing sender or receiver", newMessage);
+        return;
+      }
+
       // Check if message is relevant to this chat
       const isRelevantMessage =
-        newMessage.sender?._id === friend._id ||
-        newMessage.sender === friend._id ||
-        newMessage.receiver?._id === friend._id ||
-        newMessage.receiver === friend._id;
+        senderId === friend._id || receiverId === friend._id;
 
       debug(`Message relevance: ${isRelevantMessage}, ID: ${messageId}`);
 
@@ -809,9 +841,9 @@ export function ChatWindow({
       // Format message
       const formattedMessage: Message = {
         id: messageId,
-        senderId: newMessage.sender?._id || newMessage.sender,
-        receiverId: newMessage.receiver?._id || newMessage.receiver,
-        message: newMessage.message || newMessage.content,
+        senderId,
+        receiverId,
+        message: newMessage.message || newMessage.content || "",
         timestamp: new Date(
           newMessage.createdAt || Date.now()
         ).toLocaleTimeString([], {
@@ -827,7 +859,11 @@ export function ChatWindow({
 
       // Mark as read if we're the receiver
       if (formattedMessage.receiverId === currentUserId) {
-        socket.emit("message_read", { messageId: formattedMessage.id });
+        try {
+          socket.emit("message_read", { messageId: formattedMessage.id });
+        } catch (err) {
+          debug("Error marking message as read", err);
+        }
       }
     };
 
