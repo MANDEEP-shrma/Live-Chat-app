@@ -225,6 +225,24 @@ const deleteMe = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Unauthorized Access Denied");
   }
 
+  // Remove user from all friends and blocked lists
+  await User.updateMany(
+    {},
+    {
+      $pull: {
+        friends: userId,
+        blocked: userId,
+      },
+    }
+  );
+
+  // Delete all messages sent by the user
+  await Message.deleteMany({ sender: userId });
+
+  // Optional: Delete messages where they are the receiver too (in case of private chat logs)
+  await Message.deleteMany({ receiver: userId });
+
+  // Finally, delete the user
   const user = await User.findByIdAndDelete(userId);
 
   if (!user) {
@@ -233,7 +251,7 @@ const deleteMe = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "User deleted successfully"));
+    .json(new ApiResponse(200, {}, "User and their data deleted successfully"));
 });
 
 //on this route user can edit it's password
