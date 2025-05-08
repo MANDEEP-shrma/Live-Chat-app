@@ -195,12 +195,16 @@ export function ChatWindow({
         isDelivered: Boolean(newMessage.isDelivered),
       };
 
-      dispatch(
-        sendMessage({
-          friendId: friend._id,
-          message: formattedMessage,
-        })
-      );
+      // Check if the message already exists in the Redux state
+      const existingMessages = messages.map((msg) => msg.id);
+      if (!existingMessages.includes(formattedMessage.id)) {
+        dispatch(
+          sendMessage({
+            friendId: friend._id,
+            message: formattedMessage,
+          })
+        );
+      }
 
       // Mark message as read if we're the receiver
       if (formattedMessage.receiverId === currentUserId) {
@@ -251,16 +255,16 @@ export function ChatWindow({
       isDelivered: false,
     };
 
-    // Add to processed IDs to avoid duplicates
-    processedMessageIds.current.add(tempId);
-
-    // Add to Redux immediately for responsive UI
-    dispatch(
-      sendMessage({
-        friendId: friend._id,
-        message: tempMessage,
-      })
-    );
+    // Check if the temporary message already exists in the Redux state
+    const existingTempMessages = messages.map((msg) => msg.id);
+    if (!existingTempMessages.includes(tempMessage.id)) {
+      dispatch(
+        sendMessage({
+          friendId: friend._id,
+          message: tempMessage,
+        })
+      );
+    }
 
     setMessage("");
 
