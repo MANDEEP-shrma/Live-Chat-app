@@ -421,6 +421,7 @@ export default function Dashboard() {
         {activeFriend && selectedFriend ? (
           <div className="flex-1 flex min-w-0 flex-col">
             <ChatWindow
+              key={selectedFriend._id}
               friend={selectedFriend}
               currUser={currentUser._id}
               onClose={handleChatClose}
